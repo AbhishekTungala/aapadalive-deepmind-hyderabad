@@ -178,9 +178,9 @@ export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
   };
 
   const getStressLabel = () => {
-    if (stressPercent >= 80) return 'CRITICAL STRESS';
-    if (stressPercent >= 50) return 'ELEVATED RISK';
-    return 'RESTING BASELINE';
+    if (stressPercent >= 75) return 'HIGH INTENSITY';
+    if (stressPercent >= 45) return 'CONVERSATIONAL / ANIMATED';
+    return 'CALM BASELINE';
   };
 
   const clarityVal = isConnected
@@ -208,11 +208,11 @@ export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
             </span>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold tracking-wider ${
-            stressPercent >= 80
+            stressPercent >= 75
               ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
-              : stressPercent >= 50
-              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-              : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+              : stressPercent >= 45
+              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+              : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
           }`}>
             {getStressLabel()}
           </span>
@@ -254,7 +254,7 @@ export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
                   {stressPercent}%
                 </span>
                 <span className="text-[9px] font-mono text-cyan-300 tracking-wider">
-                  STRESS
+                  ENERGY
                 </span>
               </div>
             </div>
@@ -320,7 +320,7 @@ export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
           <div className="flex items-center gap-2">
             <Radio className="w-4 h-4 text-teal-400" />
             <span className="text-xs font-mono font-bold text-white tracking-wide uppercase">
-              Acoustic Radar & Harmonics
+              ACOUSTIC HARMONICS & DUAL PCM OSCILLOSCOPES
             </span>
           </div>
           <span className="text-[10px] font-mono text-cyan-300">
@@ -373,13 +373,13 @@ export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
           </div>
         </div>
 
-        {/* Dual Real-Time Waveform Sparklines (Caller vs Copilot) */}
+        {/* Dual Real-Time Waveform Sparklines (User vs Gemini) */}
         <div className="space-y-2 mt-auto">
           <div>
             <div className="flex items-center justify-between text-[10px] font-mono text-cyan-400 mb-1">
               <span className="flex items-center gap-1">
                 <Mic className="w-3 h-3" />
-                <span>Caller Voice Oscilloscope (16kHz)</span>
+                <span>User Microphone Stream (16kHz PCM)</span>
               </span>
               <span className="text-slate-500 text-[9px]">REAL-TIME PCM</span>
             </div>
@@ -392,9 +392,9 @@ export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
             <div className="flex items-center justify-between text-[10px] font-mono text-purple-400 mb-1">
               <span className="flex items-center gap-1">
                 <Volume2 className="w-3 h-3" />
-                <span>108 Copilot Audio Spectrum (24kHz)</span>
+                <span>Gemini Live Voice Output (24kHz PCM)</span>
               </span>
-              <span className="text-slate-500 text-[9px]">GEMINI SYNTH</span>
+              <span className="text-slate-500 text-[9px]">GEMINI LIVE BIDI</span>
             </div>
             <div className="h-14 w-full rounded-lg bg-[#0a131f] border border-[#1e3a5f]/50 overflow-hidden relative">
               <canvas ref={geminiCanvasRef} width={320} height={56} className="w-full h-full block" />

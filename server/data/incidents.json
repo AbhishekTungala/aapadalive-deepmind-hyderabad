@@ -1,1 +1,223 @@
-[]
+[
+  {
+    "id": "VOX-1270",
+    "createdAt": "2026-09-26T09:52:01.270Z",
+    "transcript": "problem",
+    "englishTranslation": "problem",
+    "intent": "General Discussion",
+    "actions": [
+      "Track spoken note: \"problem\""
+    ],
+    "entities": [],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 0,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-6017",
+    "createdAt": "2026-09-26T09:51:36.019Z",
+    "transcript": "as of no how what we do we can",
+    "englishTranslation": "as of no how what we do we can",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Investigate and synthesize answers for: \"as of no how what we do we can\"",
+      "Share summarized telemetry and findings with team"
+    ],
+    "entities": [],
+    "acousticMetrics": {
+      "stressScore": 48,
+      "pitchVarianceHz": 320,
+      "speechRateWpm": 133,
+      "snrDb": 8,
+      "peakDb": 10,
+      "f0Hz": 1746,
+      "jitterPercent": 2,
+      "acousticClarity": 71,
+      "voiceConfidence": 78,
+      "detectedTags": [
+        {
+          "id": "tremor",
+          "label": "Elevated Pitch Tremor / Panic Acoustic Signature",
+          "severity": "critical",
+          "confidence": 0.92,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-0162",
+    "createdAt": "2026-09-26T09:50:30.162Z",
+    "transcript": "live action video",
+    "englishTranslation": "live action video",
+    "intent": "General Discussion",
+    "actions": [
+      "Track spoken note: \"live action video\""
+    ],
+    "entities": [],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 0,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-7296",
+    "createdAt": "2026-09-26T09:49:27.297Z",
+    "transcript": "what is the present condition",
+    "englishTranslation": "what is the present condition",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Investigate and synthesize answers for: \"what is the present condition\"",
+      "Share summarized telemetry and findings with team"
+    ],
+    "entities": [],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 0,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-7066",
+    "createdAt": "2026-09-26T09:47:07.066Z",
+    "transcript": "హైదరాబాద్ ఆఫీస్‌లో కొత్త ఫీచర్ లాంచ్ గురించి రేపు మాట్లాడదాం",
+    "englishTranslation": "Let's talk about the new feature launch in Hyderabad office tomorrow",
+    "intent": "Meeting & Scheduling",
+    "actions": [
+      "Schedule meeting tomorrow at Hyderabad office",
+      "Prepare presentation slides and alignment agenda"
+    ],
+    "entities": [
+      {
+        "text": "Hyderabad",
+        "type": "LOCATION"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 30,
+      "pitchVarianceHz": 110,
+      "speechRateWpm": 115,
+      "snrDb": 22
+    }
+  },
+  {
+    "id": "VOX-6980",
+    "createdAt": "2026-09-26T09:46:56.980Z",
+    "transcript": "????????? ???????? ????? ????? ????? ??????? ???? ??????????",
+    "englishTranslation": "????????? ???????? ????? ????? ????? ??????? ???? ??????????",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Investigate and synthesize answers for: \"????????? ???????? ????? ????? ????? ??????? ???? ??????????\"",
+      "Share summarized telemetry and findings with team"
+    ],
+    "entities": [],
+    "acousticMetrics": {
+      "snrDb": 20,
+      "stressScore": 25,
+      "pitchVarianceHz": 100,
+      "speechRateWpm": 110
+    }
+  },
+  {
+    "id": "VOX-8989",
+    "createdAt": "2026-09-26T09:46:48.989Z",
+    "transcript": "Can we review the backend API latency and schedule a deployment for Friday?",
+    "englishTranslation": "Can we review the backend API latency and schedule a deployment for Friday?",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Investigate and synthesize answers for: \"Can we review the backend API latency and schedule a deployment for Friday?\"",
+      "Share summarized telemetry and findings with team"
+    ],
+    "entities": [
+      {
+        "text": "Backend API Latency",
+        "type": "METRIC"
+      },
+      {
+        "text": "Deployment",
+        "type": "ACTION"
+      }
+    ],
+    "acousticMetrics": {
+      "snrDb": 24,
+      "stressScore": 48,
+      "pitchVarianceHz": 160,
+      "speechRateWpm": 130
+    }
+  },
+  {
+    "id": "VOX-2613",
+    "createdAt": "2026-09-26T09:46:42.644Z",
+    "transcript": "Kal subah 10 baje Hitec City office mein product launch meeting rakhte hain",
+    "englishTranslation": "We are holding a product launch meeting tomorrow at 10 am in Hitec City office.",
+    "intent": "Meeting & Scheduling",
+    "actions": [
+      "Schedule meeting for 10:00 AM tomorrow at Hitec City office",
+      "Prepare presentation slides and alignment agenda"
+    ],
+    "entities": [
+      {
+        "text": "Hitec City",
+        "type": "LOCATION"
+      },
+      {
+        "text": "Product Launch",
+        "type": "TOPIC"
+      }
+    ],
+    "acousticMetrics": {
+      "snrDb": 22,
+      "stressScore": 35,
+      "pitchVarianceHz": 120,
+      "speechRateWpm": 115
+    }
+  }
+]

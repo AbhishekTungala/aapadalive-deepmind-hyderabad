@@ -1,38 +1,57 @@
-export type SeverityLevel = 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
-export type IncidentCategory = 'ROAD_ACCIDENT' | 'CARDIAC_ARREST' | 'STRUCTURAL_FIRE' | 'HAZMAT_TOXIC' | 'RESPIRATORY_DISTRESS' | 'AWAITING_STREAM';
+export type VoiceToneIntensity = 'HIGH' | 'MODERATE' | 'CONVERSATIONAL' | 'LOW';
 
-export interface TriageTicket {
-  ticketId: string;
+export interface StructuredVoiceAction {
+  id: string;
+  text: string;
+  type: 'ACTION' | 'KEY_POINT' | 'DECISION' | 'FOLLOW_UP';
+  priority?: 'HIGH' | 'MEDIUM' | 'NORMAL';
+}
+
+export interface VoiceActionTicket {
+  sessionId: string;
   timestamp: string;
-  category: IncidentCategory;
-  categoryLabel: string;
-  severity: SeverityLevel;
-  landmark: string;
-  exactLocation: string;
-  extractedVitals: {
-    consciousness: string;
-    breathing: string;
+  vocalTone: string;
+  detectedLanguage: string;
+  detectedIntent: string;
+  topicSummary: string;
+  structuredActions: string[];
+  entities: {
+    text: string;
+    type: 'LOCATION' | 'ACTION' | 'TOPIC' | 'ORGANIZATION' | 'METRIC';
+  }[];
+  activeLocation: string;
+  lastUpdated: string;
+  // Backward compatibility fields
+  category?: string;
+  categoryLabel?: string;
+  severity?: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
+  landmark?: string;
+  exactLocation?: string;
+  extractedVitals?: {
+    consciousness?: string;
+    breathing?: string;
     pulseStatus?: string;
     bloodLoss?: string;
     traumaNotes?: string;
+  };
+  recommendedUnit?: {
+    unitType: string;
+    unitId: string;
+    etaMinutes: number;
+    specialEquipment: string[];
   };
   callerIdentity?: {
     name?: string;
     phone?: string;
     vehiclePlate?: string;
   };
-  recommendedUnit: {
-    unitType: string;
-    unitId: string;
-    etaMinutes: number;
-    specialEquipment: string[];
-  };
-  dispatchStatus: 'PENDING_APPROVAL' | 'DISPATCHED' | 'EN_ROUTE' | 'ON_SCENE';
-  lastUpdated: string;
+  dispatchStatus?: string;
 }
 
+export type TriageTicket = VoiceActionTicket;
+
 export interface AcousticProsodyMetrics {
-  stressScore: number;
+  stressScore: number; // Reused as Vocal Energy & Expressiveness (0-100%)
   pitchVarianceHz: number;
   speechRateWpm: number;
   snrDb: number;
@@ -53,13 +72,15 @@ export interface AcousticProsodyMetrics {
 export interface TranscriptEntry {
   id: string;
   timestamp: string;
-  speaker: 'CALLER' | 'GEMINI_DISPATCH' | 'OPERATOR_OVERRIDE';
+  speaker: 'USER' | 'GEMINI_VOICE' | 'CALLER' | 'GEMINI_DISPATCH' | 'OPERATOR_OVERRIDE';
   originalText: string;
-  originalLanguage: 'te' | 'hi' | 'ur-hyderabad' | 'en' | 'code-switched';
+  originalLanguage: 'te' | 'hi' | 'ur' | 'en' | 'code-switched' | string;
   translatedText: string;
+  englishTranslation?: string;
+  voiceStyleBadge?: string;
   entities: {
     text: string;
-    type: 'LANDMARK' | 'VEHICLE_NO' | 'PHONE' | 'SYMPTOM' | 'URGENCY';
+    type: 'LOCATION' | 'ACTION' | 'TOPIC' | 'METRIC' | 'LANDMARK' | string;
   }[];
   isComplete: boolean;
 }
@@ -71,7 +92,8 @@ export interface TTSPreset {
   voice: 'Kore' | 'Aoede' | 'Puck' | 'Fenrir' | 'Zephyr';
   style: string;
   text: string;
-  category: 'REASSURANCE' | 'CPR_GUIDANCE' | 'DISPATCH_CONFIRM' | 'FIRST_AID';
+  englishTranslation?: string;
+  category: 'ACTION_SUMMARY' | 'TRANSLATION_HINDI' | 'TRANSLATION_TELUGU' | 'BRAINSTORM';
 }
 
 export interface SystemTelemetry {
@@ -93,5 +115,7 @@ export const SystemTelemetry = {};
 export const AcousticProsodyMetrics = {};
 export const TranscriptEntry = {};
 export const TriageTicket = {};
+export const VoiceActionTicket = {};
 export const TTSPreset = {};
-export const AAPADA_MODULE_VERSION = '2026.1.0';
+export const VOXLIVE_MODULE_VERSION = '2026.2.0';
+

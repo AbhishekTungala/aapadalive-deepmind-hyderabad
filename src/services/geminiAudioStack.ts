@@ -6,61 +6,65 @@ import type {
   SystemTelemetry
 } from '../types';
 
-export const HYDERABAD_CUSTOM_VOCABULARY = [
-  "Begumpet",
+export const VOX_GLOBAL_VOCABULARY = [
   "Hitec City",
   "Gachibowli",
   "Secunderabad",
+  "Madhapur",
   "Banjara Hills",
-  "Panjagutta",
+  "Jubilee Hills",
+  "Begumpet",
   "Charminar",
-  "108 Ambulance",
-  "KIMS Hospital",
-  "Apollo Jubilee Hills",
-  "Outer Ring Road",
-  "Sanath Nagar",
-  "Cyber Towers",
-  "Kondapur",
-  "Kukatpally",
-  "Dilsukhnagar"
+  "Hyderabad",
+  "Bengaluru",
+  "Mumbai",
+  "Delhi",
+  "Product Launch",
+  "Backend API",
+  "Deployment",
+  "Latency"
 ];
 
 export const TTS_ACTION_PRESETS: TTSPreset[] = [
   {
-    id: 'tts-reassure-te',
-    label: 'Reassure & Ask Landmark',
-    language: 'Telugu (తెలుగు)',
-    voice: 'Aoede',
-    style: 'calm, authoritative, reassuring emergency responder',
-    text: 'భయపడకండి, 108 ఎమర్జెన్సీ రెస్పాన్స్ లైన్‌లో ఉంది. మీ సమీప ల్యాండ్‌మార్క్ లేదా పిల్లర్ నంబర్ చెప్పండి.',
-    category: 'REASSURANCE'
+    id: 'tts-action-summary',
+    label: 'Speak Live Action Summary',
+    language: 'English (Executive Style)',
+    voice: 'Kore',
+    style: 'confident, crisp, professional executive briefing',
+    text: 'Here is the current executive summary: All strategic action items have been captured and prioritized for execution.',
+    englishTranslation: 'Here is the current executive summary: All strategic action items have been captured and prioritized for execution.',
+    category: 'ACTION_SUMMARY'
   },
   {
-    id: 'tts-cpr-hi',
-    label: 'Guide Bystander CPR',
+    id: 'tts-translate-hi',
+    label: 'Translate & Speak in Hindi',
     language: 'Hindi (हिंदी)',
     voice: 'Fenrir',
-    style: 'direct, steady, rhythmic 100bpm CPR coach, firm and assertive',
-    text: 'घबराइए मत! मरीज की छाती के बीच में दोनों हाथ रखिए। मेरे गिनने के साथ 100 बार प्रति मिनट दबाएं: एक, दो, तीन, चार!',
-    category: 'CPR_GUIDANCE'
+    style: 'conversational, fluent, clear, natural spoken Hindi collaboration',
+    text: 'हाँ, मैंने आपकी बात समझ ली है। सभी मुख्य बिंदुओं और अगले कदमों को स्क्रीन पर दर्ज कर लिया गया है।',
+    englishTranslation: 'Yes, I have understood your point. All key points and next steps have been logged on screen.',
+    category: 'TRANSLATION_HINDI'
   },
   {
-    id: 'tts-dispatch-en',
-    label: 'Confirm 108 Dispatched',
-    language: 'English (Indian Accent)',
-    voice: 'Kore',
-    style: 'clear, professional, urgent priority dispatch command',
-    text: 'Advanced Life Support Ambulance #108-HYD-42 has been dispatched from KIMS Hospital base. Estimated arrival in 4 minutes.',
-    category: 'DISPATCH_CONFIRM'
+    id: 'tts-translate-te',
+    label: 'Translate & Speak in Telugu',
+    language: 'Telugu (తెలుగు)',
+    voice: 'Aoede',
+    style: 'warm, articulate, expressive, natural Telugu conversational tone',
+    text: 'ఖచ్చితంగా, మీ ఆలోచనలు మరియు నిర్ణయాలను నేను లైవ్ యాక్షన్ ఫీడ్‌లో నమోదు చేసాను.',
+    englishTranslation: 'Certainly, I have logged your thoughts and decisions into the live action feed.',
+    category: 'TRANSLATION_TELUGU'
   },
   {
-    id: 'tts-airway-te-en',
-    label: 'Airway & Recovery Pos.',
-    language: 'Telugu + English Blend',
+    id: 'tts-brainstorm-counter',
+    label: 'Challenge / Brainstorm Counter-Point',
+    language: 'English (Analytical Style)',
     voice: 'Zephyr',
-    style: 'instructive, clear medical guidance, composed',
-    text: 'Patient తలని కొద్దిగా వెనక్కి ఎత్తి airway క్లియర్ చేయండి. Do not move the neck if spine injury is suspected.',
-    category: 'FIRST_AID'
+    style: 'inquisitive, analytical, intellectually engaging partner',
+    text: 'Let us consider an alternative perspective: If we accelerate this timeline, what are the primary trade-offs regarding reliability and operational scale?',
+    englishTranslation: 'Let us consider an alternative perspective: If we accelerate this timeline, what are the primary trade-offs regarding reliability and operational scale?',
+    category: 'BRAINSTORM'
   }
 ];
 
@@ -125,7 +129,29 @@ export class GeminiAudioStack {
     const sessionKey = typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('gemini_api_key') || '') : '';
     if (sessionKey) {
       this.apiKey = sessionKey;
+    } else {
+      this.fetchRuntimeKey();
     }
+  }
+
+  public async fetchRuntimeKey(): Promise<string> {
+    if (this.apiKey) return this.apiKey;
+    try {
+      const res = await fetch('/api/config/runtime');
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.apiKey) {
+          this.apiKey = data.apiKey;
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem('gemini_api_key', data.apiKey);
+          }
+          return this.apiKey;
+        }
+      }
+    } catch {
+      // Local runtime config unavailable
+    }
+    return '';
   }
 
   public setApiKey(key: string) {
@@ -211,14 +237,17 @@ export class GeminiAudioStack {
       // Start browser SpeechRecognition in parallel for real-time utterance streaming
       this.startSpeechRecognition();
 
-      const activeKey = this.apiKey.trim() || (typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('gemini_api_key') || '') : '');
+      let activeKey = this.apiKey.trim() || (typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('gemini_api_key') || '') : '');
+      if (!activeKey) {
+        activeKey = (await this.fetchRuntimeKey()).trim();
+      }
 
       if (activeKey) {
         const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${activeKey}`;
         this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
-          console.log('[AapadaLive] Native WebSocket Connected to gemini-3.8-live Bidi endpoint');
+          console.log('[VoxLive] Native WebSocket Connected to gemini-3.8-live Bidi endpoint');
           this.telemetry.connectionStatus = 'CONNECTED';
           this.callbacks.onTelemetryUpdate({
             connectionStatus: 'CONNECTED',
@@ -244,60 +273,40 @@ export class GeminiAudioStack {
               outputAudioTranscription: {},
               systemInstruction: {
                 parts: [{
-                  text: `You are AapadaLive, an emergency response AI copilot for Hyderabad 108 Emergency Dispatch.
-You are on a live crisis triage audio call with a high-stress caller who may speak Telugu, Hindi, Hyderabadi Urdu, or English.
-Extract critical landmarks (e.g., Begumpet, Gachibowli, Banjara Hills, Charminar, Secunderabad), caller phone numbers, vehicle plates, victim vitals, and severity.
-You MUST frequently invoke the update_triage_dashboard tool as an asynchronous function call in the background to update the triage board while speaking calmly.`
+                  text: `You are VoxLive, a real-time voice-first AI collaborator powered by the Gemini Audio Stack.
+Respond naturally, concisely (1-2 sentences), and directly to whatever the user just said, adapting your tone to their vocal prosody.
+When the user discusses plans, meetings, engineering tasks, or decisions, invoke the update_voice_action_board tool asynchronously in the background to record actionable next steps and discussion points.`
                 }]
               },
               tools: [{
                 functionDeclarations: [{
-                  name: 'update_triage_dashboard',
-                  description: 'Updates the Hyderabad 108 dispatch triage ticket with extracted vitals, category, severity, and landmark.',
+                  name: 'update_voice_action_board',
+                  description: 'Records real-time structured voice actions, topic summary, detected intent, and entities.',
                   parameters: {
                     type: 'OBJECT',
                     properties: {
-                      category: {
+                      topicSummary: {
                         type: 'STRING',
-                        enum: ['ROAD_ACCIDENT', 'CARDIAC_ARREST', 'STRUCTURAL_FIRE', 'HAZMAT_TOXIC', 'RESPIRATORY_DISTRESS'],
-                        description: 'Incident classification'
+                        description: 'Brief 3-6 word summary of discussion topic'
                       },
-                      severity: {
+                      detectedIntent: {
                         type: 'STRING',
-                        enum: ['CRITICAL', 'HIGH', 'MODERATE', 'LOW'],
-                        description: 'Triage urgency level'
+                        description: 'Intent: Question / Inquiry, Meeting & Scheduling, Task / Action Request, Brainstorming & Strategy, General Discussion'
                       },
-                      landmark: {
+                      vocalTone: {
                         type: 'STRING',
-                        description: 'Closest Hyderabad landmark (e.g., Begumpet, Gachibowli, Secunderabad, Banjara Hills)'
+                        description: 'Tone: Calm & Conversational, Animated & Energetic, Urgent / High Intensity, Hesitant / Low Volume'
                       },
-                      exactLocation: {
+                      structuredActions: {
+                        type: 'ARRAY',
+                        items: { type: 'STRING' },
+                        description: '1-3 concrete action items or decisions'
+                      },
+                      location: {
                         type: 'STRING',
-                        description: 'Specific junction or ramp'
-                      },
-                      vitals: {
-                        type: 'OBJECT',
-                        properties: {
-                          consciousness: { type: 'STRING' },
-                          breathing: { type: 'STRING' },
-                          pulseStatus: { type: 'STRING' },
-                          bloodLoss: { type: 'STRING' },
-                          traumaNotes: { type: 'STRING' }
-                        }
-                      },
-                      callerInfo: {
-                        type: 'OBJECT',
-                        properties: {
-                          phone: { type: 'STRING' },
-                          vehiclePlate: { type: 'STRING' }
-                        }
-                      },
-                      recommendedUnit: {
-                        type: 'STRING',
-                        description: 'e.g. ALS-108 Ambulance, Fire Tender'
+                        description: 'Mentioned city or landmark'
                       }
-                    },
-                    required: ['category', 'severity', 'landmark']
+                    }
                   }
                 }]
               }]
@@ -317,12 +326,12 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
         };
 
         this.ws.onerror = (err) => {
-          console.warn('[AapadaLive] WebSocket Live API connection error, falling back to Interactive Live Mic:', err);
+          console.warn('[VoxLive] WebSocket Live API connection error, falling back to Interactive Live Mic:', err);
           this.startSimulatedLiveSession();
         };
 
         this.ws.onclose = () => {
-          console.log('[AapadaLive] WebSocket disconnected');
+          console.log('[VoxLive] WebSocket disconnected');
           this.callbacks.onTelemetryUpdate({ connectionStatus: 'DISCONNECTED', interactionStatus: 'IDLE' });
         };
       } else {
@@ -363,7 +372,7 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
                   body: JSON.stringify({
                     audioBase64: base64Audio,
                     mimeType: 'audio/webm',
-                    customVocabulary: HYDERABAD_CUSTOM_VOCABULARY
+                    customVocabulary: VOX_GLOBAL_VOCABULARY
                   })
                 });
                 const triagePayload = await res.json();
@@ -530,26 +539,29 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
         if (part.inlineData && part.inlineData.mimeType?.startsWith('audio/pcm')) {
           this.enqueuePcm24kAudio(part.inlineData.data);
         }
-        if (part.text) {
+        if (part.text && part.text.trim().length > 0) {
+          const text = part.text.trim();
           this.callbacks.onTranscriptReceived({
             id: `gemini-${Date.now()}`,
             timestamp: new Date().toLocaleTimeString(),
-            speaker: 'GEMINI_DISPATCH',
-            originalText: part.text,
+            speaker: 'GEMINI_VOICE',
+            originalText: text,
             originalLanguage: 'en',
-            translatedText: part.text,
-            entities: this.extractEntities(part.text),
-            isComplete: false
+            translatedText: text,
+            englishTranslation: text,
+            entities: this.extractEntities(text),
+            isComplete: false,
+            voiceStyleBadge: 'Voice: Gemini 3.8 Live'
           });
         }
       }
     }
 
-    // 4. Asynchronous Function Calling: update_triage_dashboard
+    // 4. Asynchronous Function Calling: update_voice_action_board
     if (data?.toolCall?.functionCalls) {
       for (const fc of data.toolCall.functionCalls) {
-        if (fc.name === 'update_triage_dashboard') {
-          this.executeTriageToolCall(fc.id, fc.args);
+        if (fc.name === 'update_voice_action_board' || fc.name === 'update_triage_dashboard') {
+          this.executeVoiceActionToolCall(fc.id, fc.args);
         }
       }
     }
@@ -635,33 +647,28 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
   }
 
   /**
-   * Executes update_triage_dashboard non-blocking tool call
+   * Executes update_voice_action_board non-blocking tool call
    */
-  private executeTriageToolCall(callId: string, args: any) {
+  private executeVoiceActionToolCall(callId: string, args: any) {
+    const actions: string[] = Array.isArray(args.structuredActions) ? args.structuredActions : [];
+    if (args.actionItem && !actions.includes(args.actionItem)) {
+      actions.push(args.actionItem);
+    }
+
     const updatedTicket: Partial<TriageTicket> = {
-      category: args.category || 'AWAITING_STREAM',
-      categoryLabel: args.category ? args.category.replace(/_/g, ' ') : 'Awaiting Voice Stream...',
-      severity: args.severity || 'MODERATE',
-      landmark: args.landmark || 'Awaiting Caller Location...',
-      exactLocation: args.exactLocation || 'Awaiting Caller Location...',
-      extractedVitals: {
-        consciousness: args.vitals?.consciousness || 'Awaiting Voice Stream...',
-        breathing: args.vitals?.breathing || 'Awaiting Voice Stream...',
-        pulseStatus: args.vitals?.pulseStatus,
-        bloodLoss: args.vitals?.bloodLoss,
-        traumaNotes: args.vitals?.traumaNotes || 'Awaiting Voice Stream...'
-      },
-      callerIdentity: {
-        phone: args.callerInfo?.phone || 'Not Provided',
-        vehiclePlate: args.callerInfo?.vehiclePlate || 'None Reported'
-      },
-      recommendedUnit: {
-        unitType: args.recommendedUnit || 'ALS-108 Emergency Ambulance',
-        unitId: '108-HYD-42',
-        etaMinutes: 4,
-        specialEquipment: ['Spinal Immobilization Board', 'Defibrillator AED', 'Oxygen Ventilator']
-      },
-      lastUpdated: new Date().toLocaleTimeString()
+      sessionId: `VOX-${Date.now().toString().slice(-4)}`,
+      vocalTone: args.vocalTone || 'Calm & Conversational',
+      detectedIntent: args.detectedIntent || 'General Discussion',
+      topicSummary: args.topicSummary || 'Voice Discussion',
+      structuredActions: actions.length > 0 ? actions : ['Track discussion deliverables'],
+      activeLocation: args.location || '',
+      lastUpdated: new Date().toLocaleTimeString(),
+      // Compatibility aliases
+      category: args.detectedIntent || 'General Discussion',
+      categoryLabel: args.topicSummary || 'Voice Discussion',
+      severity: (args.vocalTone && args.vocalTone.includes('High')) ? 'HIGH' : 'MODERATE',
+      landmark: args.location || 'Voice Context Active',
+      exactLocation: args.location || 'Voice Context Active'
     };
 
     this.callbacks.onTriageUpdate(updatedTicket);
@@ -670,7 +677,7 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
       const responseMessage = {
         toolResponse: {
           functionResponses: [{
-            response: { output: { success: true, ticketId: 'HYD-108-' + Date.now().toString().slice(-4) } },
+            response: { output: { success: true, sessionId: 'VOX-' + Date.now().toString().slice(-4) } },
             id: callId
           }]
         }
@@ -686,16 +693,37 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
   public async executeOneTapTTS(preset: TTSPreset): Promise<void> {
     await this.ensureAudioContext();
 
+    const cleanText = (preset.text || '').trim();
+    if (!cleanText) return;
+
+    const isTelugu = preset.category === 'TRANSLATION_TELUGU';
+    const isHindi = preset.category === 'TRANSLATION_HINDI';
+    const langTag = isTelugu ? 'te' : isHindi ? 'hi' : 'en';
+
+    const cleanBadge = isTelugu
+      ? 'Voice: Aoede • Warm Telugu'
+      : isHindi
+      ? 'Voice: Fenrir • Conversational Hindi'
+      : preset.category === 'BRAINSTORM'
+      ? 'Voice: Zephyr • Analytical English'
+      : 'Voice: Kore • Executive English';
+
+    const englishTrans = preset.englishTranslation || (langTag === 'en' ? cleanText : '');
+
     this.callbacks.onTranscriptReceived({
       id: `tts-${Date.now()}`,
       timestamp: new Date().toLocaleTimeString(),
-      speaker: 'OPERATOR_OVERRIDE',
-      originalText: `[TTS INJECTION - ${preset.voice} (${preset.style})]: "${preset.text}"`,
-      originalLanguage: 'code-switched',
-      translatedText: preset.text,
-      entities: this.extractEntities(preset.text),
-      isComplete: true
+      speaker: 'GEMINI_VOICE',
+      originalText: cleanText,
+      originalLanguage: langTag,
+      translatedText: englishTrans,
+      englishTranslation: englishTrans,
+      entities: this.extractEntities(cleanText),
+      isComplete: true,
+      voiceStyleBadge: cleanBadge
     });
+
+    let playedViaWebAudio = false;
 
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -707,7 +735,7 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
         method: 'POST',
         headers,
         body: JSON.stringify({
-          text: preset.text,
+          text: cleanText,
           voiceName: preset.voice,
           stylePrompt: preset.style
         })
@@ -722,10 +750,24 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
         source.connect(this.geminiGainNode);
         source.start();
         this.scheduledAudioSources.push(source);
-        return;
+        playedViaWebAudio = data.source === 'gemini-3.8-flash-tts';
       }
     } catch (err) {
-      console.warn('Backend TTS fetch error, using direct audio synthesis:', err);
+      console.warn('Backend TTS fetch error:', err);
+    }
+
+    // Audible immediate playback via Web SpeechSynthesis if not played via Gemini Cloud TTS
+    if (!playedViaWebAudio && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(cleanText);
+        utter.lang = isTelugu ? 'te-IN' : isHindi ? 'hi-IN' : 'en-US';
+        utter.rate = 1.0;
+        utter.pitch = isTelugu ? 1.1 : isHindi ? 0.95 : 1.0;
+        window.speechSynthesis.speak(utter);
+      } catch (synthErr) {
+        console.warn('SpeechSynthesis playback notice:', synthErr);
+      }
     }
   }
 
@@ -749,7 +791,7 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
   private startSpeechRecognition() {
     const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRec) {
-      console.warn('[AapadaLive] Browser SpeechRecognition not supported in this environment');
+      console.warn('[VoxLive] Browser SpeechRecognition not supported in this environment');
       return;
     }
 
@@ -803,7 +845,7 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
 
       recognition.onerror = (event: any) => {
         if (event.error !== 'no-speech') {
-          console.warn('[AapadaLive] SpeechRecognition error:', event.error);
+          console.warn('[VoxLive] SpeechRecognition error:', event.error);
         }
       };
 
@@ -819,7 +861,7 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
       recognition.start();
       this.recognition = recognition;
     } catch (err) {
-      console.warn('[AapadaLive] Failed to initialize SpeechRecognition:', err);
+      console.warn('[VoxLive] Failed to initialize SpeechRecognition:', err);
     }
   }
 
@@ -844,28 +886,36 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
         this.callbacks.onTriageUpdate(data.triageUpdate);
       }
 
-      if (data.copilotReply) {
+      if (data.copilotReply && data.copilotReply.trim().length > 0) {
+        const replyText = data.copilotReply.trim();
         const replyId = `gemini-${Date.now()}`;
         this.callbacks.onTranscriptReceived({
           id: replyId,
           timestamp: new Date().toLocaleTimeString(),
-          speaker: 'GEMINI_DISPATCH',
-          originalText: data.copilotReply,
+          speaker: 'GEMINI_VOICE',
+          originalText: replyText,
           originalLanguage: 'en',
-          translatedText: data.copilotReply,
-          entities: this.extractEntities(data.copilotReply),
-          isComplete: true
+          translatedText: replyText,
+          englishTranslation: replyText,
+          entities: this.extractEntities(replyText),
+          isComplete: true,
+          voiceStyleBadge: 'Voice: Kore • Copilot Response'
         });
 
-        this.speakCopilotResponse(data.copilotReply);
+        this.speakCopilotResponse(replyText);
       }
     } catch (err) {
-      console.warn('[AapadaLive] Error processing spoken utterance:', err);
+      console.warn('[VoxLive] Error processing spoken utterance:', err);
     }
   }
 
   private async speakCopilotResponse(text: string) {
+    const clean = (text || '').trim();
+    if (!clean) return;
+
     await this.ensureAudioContext();
+    let playedViaWebAudio = false;
+
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (this.apiKey) {
@@ -876,9 +926,9 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
         method: 'POST',
         headers,
         body: JSON.stringify({
-          text,
+          text: clean,
           voiceName: 'Kore',
-          stylePrompt: 'clear, professional, urgent priority dispatch command'
+          stylePrompt: 'clear, engaging, conversational collaborator'
         })
       });
 
@@ -891,36 +941,46 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
         source.connect(this.geminiGainNode);
         source.start();
         this.scheduledAudioSources.push(source);
+        playedViaWebAudio = data.source === 'gemini-3.8-flash-tts';
       }
     } catch (e) {
-      console.warn('[AapadaLive] Error playing copilot response:', e);
+      console.warn('[VoxLive] Error playing copilot response:', e);
+    }
+
+    if (!playedViaWebAudio && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(clean);
+        utter.rate = 1.05;
+        utter.pitch = 1.0;
+        window.speechSynthesis.speak(utter);
+      } catch (synthErr) {
+        console.warn('SpeechSynthesis backup notice:', synthErr);
+      }
     }
   }
 
-  public extractEntities(text: string): { text: string; type: 'LANDMARK' | 'VEHICLE_NO' | 'PHONE' | 'SYMPTOM' | 'URGENCY' }[] {
-    const entities: { text: string; type: 'LANDMARK' | 'VEHICLE_NO' | 'PHONE' | 'SYMPTOM' | 'URGENCY' }[] = [];
+  public extractEntities(text: string): { text: string; type: 'LOCATION' | 'ACTION' | 'TOPIC' | 'METRIC' | string }[] {
+    const entities: { text: string; type: 'LOCATION' | 'ACTION' | 'TOPIC' | 'METRIC' | string }[] = [];
 
-    for (const landmark of HYDERABAD_CUSTOM_VOCABULARY) {
-      if (new RegExp(`\\b${landmark}\\b`, 'i').test(text)) {
-        entities.push({ text: landmark, type: 'LANDMARK' });
+    for (const loc of VOX_GLOBAL_VOCABULARY) {
+      if (new RegExp(`\\b${loc}\\b`, 'i').test(text)) {
+        entities.push({ text: loc, type: 'LOCATION' });
       }
     }
 
-    const plateRegex = /\b(TS|AP)\s?[0-9]{1,2}\s?[A-Z]{1,3}\s?[0-9]{3,4}\b/gi;
-    let match;
-    while ((match = plateRegex.exec(text)) !== null) {
-      entities.push({ text: match[0], type: 'VEHICLE_NO' });
-    }
-
-    const phoneRegex = /\b(\+91[\s-]?)?[6-9][0-9]{4}[\s-]?[0-9]{5}\b/g;
-    while ((match = phoneRegex.exec(text)) !== null) {
-      entities.push({ text: match[0], type: 'PHONE' });
-    }
-
-    const symptoms = ['unconscious', 'bleeding', 'fracture', 'dying', 'not breathing', 'chest pain', 'fire', 'smoke', 'shock'];
-    for (const s of symptoms) {
-      if (new RegExp(`\\b${s}\\b`, 'i').test(text)) {
-        entities.push({ text: s.toUpperCase(), type: 'SYMPTOM' });
+    const topics = [
+      { word: 'product launch', type: 'TOPIC' },
+      { word: 'backend api', type: 'TOPIC' },
+      { word: 'latency', type: 'METRIC' },
+      { word: 'deployment', type: 'ACTION' },
+      { word: 'meeting', type: 'ACTION' },
+      { word: 'schedule', type: 'ACTION' },
+      { word: 'review', type: 'ACTION' }
+    ];
+    for (const item of topics) {
+      if (new RegExp(`\\b${item.word}\\b`, 'i').test(text)) {
+        entities.push({ text: item.word.toUpperCase(), type: item.type });
       }
     }
 

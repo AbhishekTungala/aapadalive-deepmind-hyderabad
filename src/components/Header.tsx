@@ -69,21 +69,21 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="relative z-30 border-b border-[#1e3a5f]/60 bg-[#0a131f]/95 backdrop-blur-2xl px-4 lg:px-6 py-2.5 shadow-[0_4px_24px_rgba(0,0,0,0.6)]">
       {/* Auto Hang-Off Countdown Banner */}
       {telemetry.autoHangUpCountdown !== null && telemetry.autoHangUpCountdown !== undefined && (
-        <div className="absolute top-full left-0 right-0 z-50 bg-gradient-to-r from-red-600/30 via-rose-600/40 to-red-600/30 border-b-2 border-rose-500 text-rose-200 px-6 py-2.5 flex items-center justify-between shadow-2xl backdrop-blur-xl animate-pulse">
+        <div className="absolute top-full left-0 right-0 z-50 bg-gradient-to-r from-cyan-600/30 via-teal-600/40 to-cyan-600/30 border-b-2 border-cyan-500 text-cyan-200 px-6 py-2.5 flex items-center justify-between shadow-2xl backdrop-blur-xl animate-pulse">
           <div className="flex items-center gap-3">
-            <span className="p-1 px-2.5 rounded-lg bg-rose-600 text-white font-extrabold text-xs tracking-wider shadow-md">
-              AUTO HANG-OFF INITIATED
+            <span className="p-1 px-2.5 rounded-lg bg-cyan-600 text-white font-extrabold text-xs tracking-wider shadow-md">
+              VOICE SESSION COMPLETION
             </span>
             <div className="flex items-center gap-2">
-              <PhoneOff className="w-4 h-4 text-rose-400" />
+              <PhoneOff className="w-4 h-4 text-cyan-400" />
               <span className="text-xs font-semibold tracking-wide">
-                108 Dispatch Authorized: Dispatch announcement complete. Disconnecting line in{' '}
+                Voice interaction finalized. Disconnecting audio line in{' '}
                 <span className="font-mono font-bold text-white text-sm underline">{telemetry.autoHangUpCountdown}s</span>...
               </span>
             </div>
           </div>
-          <div className="text-xs font-mono text-rose-300 hidden md:block">
-            Microphone & Web Audio buffer queue releasing
+          <div className="text-xs font-mono text-cyan-300 hidden md:block">
+            Microphone & Web Audio buffer queue releasing cleanly
           </div>
         </div>
       )}
@@ -98,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-400" />
               <span className="text-sm font-semibold tracking-wide">
-                Caller interrupted Gemini mid-sentence! Audio playback buffer flushed instantly (0ms latency).
+                User interrupted Gemini mid-sentence! Audio playback buffer flushed instantly (0ms latency).
               </span>
             </div>
           </div>
@@ -123,16 +123,16 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div>
             <h1 className="text-sm md:text-base font-black tracking-tight text-white flex items-center gap-2 font-mono">
-              <span className="bg-gradient-to-r from-rose-400 via-amber-300 to-cyan-400 bg-clip-text text-transparent">
-                AapadaLive
+              <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">
+                VoxLive AI
               </span>
               <span className="text-slate-400 font-sans font-bold">—</span>
               <span className="text-white">
-                Next-Gen Voice & Real-Time Audio Copilot
+                Next-Gen Voice & Real-Time Audio Stack
               </span>
             </h1>
             <p className="text-[10px] md:text-[11px] text-cyan-300/80 font-mono tracking-wider uppercase mt-0.5">
-              MID-SENTENCE BARGE-IN • VOCAL TONE PROSODY • REAL-TIME TRANSLATION • STRUCTURED VOICE ACTION
+              GEMINI 3.8 LIVE • MID-SENTENCE BARGE-IN • VOCAL PROSODY • LIVE TRANSLATE • STRUCTURED VOICE ACTION
             </p>
           </div>
         </div>
@@ -153,9 +153,9 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Mic 16kHz Active Pill */}
           <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111e2e] border border-[#1e3a5f] text-xs font-mono">
-            <Mic className={`w-3.5 h-3.5 ${isConnected ? 'text-rose-400 animate-pulse' : 'text-slate-400'}`} />
+            <Mic className={`w-3.5 h-3.5 ${isConnected ? 'text-cyan-400 animate-pulse' : 'text-slate-400'}`} />
             <span className="text-slate-400">Mic:</span>
-            <span className={`font-bold ${isConnected ? 'text-rose-300' : 'text-slate-300'}`}>
+            <span className={`font-bold ${isConnected ? 'text-cyan-300' : 'text-slate-300'}`}>
               {isConnected ? '16kHz Live' : '16kHz Standby'}
             </span>
           </div>
@@ -177,14 +177,14 @@ export const Header: React.FC<HeaderProps> = ({
             {apiKey && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
           </button>
 
-          {/* Start / End Live Call Button */}
+          {/* Start / End Live Voice Session Button */}
           {isConnected ? (
             <button
               onClick={onStopCall}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-mono font-bold text-xs tracking-wider shadow-[0_0_20px_rgba(225,29,72,0.45)] border border-rose-400/50 cursor-pointer active:scale-95 transition-all animate-pulse"
             >
               <PhoneOff className="w-4 h-4 text-white" />
-              <span>HANG UP // END CALL ({formatDuration(telemetry.callDurationSeconds || 0)})</span>
+              <span>END VOICE SESSION ({formatDuration(telemetry.callDurationSeconds || 0)})</span>
             </button>
           ) : isFinalized ? (
             <button
@@ -192,7 +192,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-mono font-bold text-xs tracking-wider shadow-[0_0_20px_rgba(16,185,129,0.35)] cursor-pointer active:scale-95 transition-all"
             >
               <PhoneCall className="w-4 h-4 text-slate-950" />
-              <span>START NEW EMERGENCY CALL</span>
+              <span>START NEW VOICE SESSION</span>
             </button>
           ) : (
             <button
@@ -201,7 +201,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-mono font-bold text-xs tracking-wider shadow-[0_0_25px_rgba(6,182,212,0.4)] cursor-pointer active:scale-95 transition-all"
             >
               <PhoneCall className="w-4 h-4 text-slate-950" />
-              <span>{isConnecting ? 'CONNECTING MIC...' : 'START LIVE 108 CALL'}</span>
+              <span>{isConnecting ? 'CONNECTING MIC...' : 'START LIVE VOICE SESSION'}</span>
             </button>
           )}
         </div>

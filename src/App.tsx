@@ -13,34 +13,26 @@ import type {
   TTSPreset
 } from './types';
 
-// Strict Real-Time Extraction Defaults (ZERO Mock Data)
+// Universal Real-Time Voice Intelligence Defaults (ZERO Mock Data)
 const STANDBY_TRIAGE_TICKET: TriageTicket = {
-  ticketId: 'STANDBY-108',
+  sessionId: 'VOX-STANDBY',
   timestamp: '--:--:--',
+  vocalTone: 'Neutral / Standby',
+  detectedLanguage: 'Awaiting Voice Stream...',
+  detectedIntent: 'Standby',
+  topicSummary: 'Awaiting Spoken Input...',
+  structuredActions: [
+    'Voice stream active on 16kHz PCM line',
+    'Awaiting spoken conversation to extract real-time actions and deliverables'
+  ],
+  entities: [],
+  activeLocation: '',
+  lastUpdated: '--:--:--',
   category: 'AWAITING_STREAM',
   categoryLabel: 'Awaiting Voice Stream...',
   severity: 'MODERATE',
-  landmark: 'Awaiting Caller Location...',
-  exactLocation: 'Awaiting Caller Location...',
-  extractedVitals: {
-    consciousness: 'Awaiting Voice Stream...',
-    breathing: 'Awaiting Voice Stream...',
-    pulseStatus: 'Awaiting Voice Stream...',
-    bloodLoss: 'None Reported',
-    traumaNotes: 'Awaiting Voice Stream...'
-  },
-  callerIdentity: {
-    phone: 'Not Provided',
-    vehiclePlate: 'None Reported'
-  },
-  recommendedUnit: {
-    unitType: 'ALS-108 Emergency Ambulance',
-    unitId: 'HYD-108-STANDBY',
-    etaMinutes: 4,
-    specialEquipment: ['Telemetry Stream', 'Automated Triage', 'Bilingual Bridge']
-  },
-  dispatchStatus: 'PENDING_APPROVAL',
-  lastUpdated: '--:--:--'
+  landmark: 'Listening for spoken location...',
+  exactLocation: 'Listening for spoken location...'
 };
 
 const STANDBY_PROSODY: AcousticProsodyMetrics = {
@@ -96,6 +88,25 @@ export function App() {
     () => (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('gemini_api_key') : '') || ''
   );
 
+  useEffect(() => {
+    if (!apiKey) {
+      fetch('/api/config/runtime')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.apiKey) {
+            setApiKey(data.apiKey);
+            try {
+              sessionStorage.setItem('gemini_api_key', data.apiKey);
+            } catch {}
+            if (audioStackRef.current) {
+              audioStackRef.current.setApiKey(data.apiKey);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [apiKey]);
+
   const [autoHangUpCountdown, setAutoHangUpCountdown] = useState<number | null>(null);
   const silenceTimerRef = useRef<number>(0);
   const audioStackRef = useRef<GeminiAudioStack | null>(null);
@@ -111,6 +122,8 @@ export function App() {
         setSplineHistory((prev) => [...prev.slice(1), Math.max(5, newProsody.stressScore)]);
       },
       onTranscriptReceived: (entry) => {
+        const text = (entry.originalText || (entry as any).text || '').trim();
+        if (!text) return;
         setTranscripts((prev) => {
           const existingIdx = prev.findIndex((e) => e.id === entry.id);
           if (existingIdx >= 0) {
@@ -176,7 +189,11 @@ export function App() {
     if (telemetry.connectionStatus === 'CONNECTED' && autoHangUpCountdown === null) {
       interval = setInterval(() => {
         const isSilent = (telemetry.audioInputLevel || 0) < 5 && (telemetry.audioOutputLevel || 0) < 5;
-        const hasExtractedData = ticket.landmark !== 'Awaiting Caller Location...' && !ticket.landmark.includes('Awaiting');
+        const hasExtractedData = Boolean(
+          ticket.landmark &&
+          !ticket.landmark.includes('Awaiting') &&
+          !ticket.landmark.includes('Listening')
+        );
 
         if (isSilent && hasExtractedData) {
           silenceTimerRef.current += 1;
@@ -345,18 +362,18 @@ export function App() {
   const handleDispatchTicket = () => {
     setTicket((prev) => ({
       ...prev,
-      dispatchStatus: 'DISPATCHED'
+      dispatchStatus: 'EXECUTED'
     }));
 
     if (audioStackRef.current) {
       audioStackRef.current.executeOneTapTTS({
-        id: 'tts-dispatch-announcement',
-        label: 'Dispatch Announcement',
-        language: 'English (Indian Accent)',
+        id: 'tts-action-summary',
+        label: 'Action Summary',
+        language: 'English (Executive Style)',
         voice: 'Kore',
-        style: 'clear, professional, urgent priority dispatch command',
-        text: '108 Ambulance has been dispatched to your location. Help is on the way.',
-        category: 'DISPATCH_CONFIRM'
+        style: 'confident, crisp, professional executive briefing',
+        text: 'All strategic action items from this voice session have been processed and confirmed.',
+        category: 'ACTION_SUMMARY'
       });
     }
 
@@ -390,11 +407,11 @@ export function App() {
           />
         </section>
 
-        {/* Center Hero Card: Hyderabad Operations Map + Live Voice Stream (TranscriptZone) */}
+        {/* Center Hero Card: Live Multi-Speaker Voice & Translation Console + Structured Action Board (TranscriptZone) */}
         <section className="lg:col-span-6 h-full overflow-hidden">
           <TranscriptZone
             transcript={transcripts}
-            activeLandmark={ticket.landmark}
+            ticket={ticket}
           />
         </section>
 
@@ -419,7 +436,7 @@ export function App() {
           <div className="col-span-12 md:col-span-3 flex flex-col gap-1">
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <AlertOctagon className="w-3.5 h-3.5 text-cyan-400" />
-              <span>INCIDENT PRIORITY LEVEL</span>
+              <span>VOICE ACTION PRIORITY LEVEL</span>
             </span>
             <div className="grid grid-cols-4 gap-1 p-1 rounded-lg bg-[#0a131f] border border-[#1e3a5f]/60 text-[10px] font-mono font-bold text-center">
               <div className={`py-1 rounded ${
@@ -427,7 +444,7 @@ export function App() {
                   ? 'bg-rose-500 text-white shadow-[0_0_10px_#f43f5e] animate-pulse'
                   : 'text-slate-500'
               }`}>
-                CRITICAL
+                URGENT
               </div>
               <div className={`py-1 rounded ${
                 currentSeverity === 'HIGH' && ticket.category !== 'AWAITING_STREAM'
@@ -438,10 +455,10 @@ export function App() {
               </div>
               <div className={`py-1 rounded ${
                 currentSeverity === 'MODERATE' && ticket.category !== 'AWAITING_STREAM'
-                  ? 'bg-amber-500 text-white shadow-[0_0_10px_#f59e0b]'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-[0_0_10px_#06b6d4]'
                   : 'text-slate-500'
               }`}>
-                MED
+                NORMAL
               </div>
               <div className={`py-1 rounded ${
                 ticket.category === 'AWAITING_STREAM' || currentSeverity === 'LOW'
@@ -458,7 +475,7 @@ export function App() {
             <div className="flex items-center justify-between text-[10px] font-mono">
               <span className="text-cyan-300 flex items-center gap-1">
                 <Activity className="w-3 h-3 text-cyan-400" />
-                <span>DYNAMIC CALL ACOUSTIC ENERGY & STRESS SPLINE</span>
+                <span>DYNAMIC LIVE ACOUSTIC ENERGY & PROSODY SPLINE</span>
               </span>
               <span className="text-slate-400">DSP ROLLING 40-FRAME BUFFER</span>
             </div>
