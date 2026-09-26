@@ -227,6 +227,16 @@ export function App() {
   };
 
   const handleStartLiveMic = () => {
+    setTranscripts([]);
+    setProsody({
+      stressScore: 10,
+      pitchVarianceHz: 0,
+      speechRateWpm: 0,
+      snrDb: 6,
+      detectedTags: [
+        { id: 'live-open', label: '108 Live Audio Line Open', severity: 'info', confidence: 0.99, active: true }
+      ]
+    });
     setTelemetry((t) => ({ ...t, callState: 'ACTIVE' }));
     if (audioStackRef.current) {
       audioStackRef.current.connectLiveSession();
@@ -251,6 +261,7 @@ export function App() {
 
   const handleStartNewCall = () => {
     handleStopCall();
+    setTranscripts([]);
     setTicket({
       ...INITIAL_TRIAGE_TICKET,
       ticketId: `HYD-108-${Date.now().toString().slice(-4)}`,
@@ -258,7 +269,15 @@ export function App() {
       timestamp: new Date().toLocaleTimeString(),
       lastUpdated: new Date().toLocaleTimeString()
     });
-    setProsody(INITIAL_PROSODY);
+    setProsody({
+      stressScore: 10,
+      pitchVarianceHz: 0,
+      speechRateWpm: 0,
+      snrDb: 6,
+      detectedTags: [
+        { id: 'line-ready', label: '108 Line Ready For Next Emergency', severity: 'info', confidence: 0.99, active: true }
+      ]
+    });
     setAutoHangUpCountdown(null);
     setTelemetry((t) => ({
       ...t,
@@ -269,6 +288,7 @@ export function App() {
   };
 
   const handleStartScenario = (scenario: 'PVNR_ACCIDENT' | 'GACHIBOWLI_CARDIAC' | 'BALANAGAR_FIRE') => {
+    setTranscripts([]);
     setTelemetry((t) => ({ ...t, callState: 'ACTIVE' }));
     if (audioStackRef.current) {
       audioStackRef.current.startSimulatedDemoCall(scenario);

@@ -1,0 +1,31 @@
+[
+  {
+    "id": "HYD-108-9412",
+    "timestamp": "2026-09-26T11:45:00.000Z",
+    "category": "ROAD_ACCIDENT",
+    "categoryLabel": "Road Traffic Accident",
+    "severity": "CRITICAL",
+    "landmark": "PVNR Expressway Pillar 142",
+    "exactLocation": "Mehdipatnam Ramp Descent, Hyderabad",
+    "vitals": {
+      "consciousness": "Driver trapped, slipping into coma",
+      "breathing": "Tachypnea with audible stridor",
+      "pulseStatus": "Thready, 130 bpm",
+      "bloodLoss": "Severe arterial laceration",
+      "traumaNotes": "IMMINENT VEHICLE FIRE: 2 passengers evacuated"
+    },
+    "callerInfo": {
+      "phone": "+91 98490 44108",
+      "vehiclePlate": "TS 09 UB 4402"
+    },
+    "recommendedUnit": {
+      "unitType": "ALS-108 Ambulance + Telangana Fire Tender",
+      "unitId": "108-HYD-42 & TSF-08",
+      "etaMinutes": 2
+    },
+    "dispatchStatus": "DISPATCHED",
+    "dispatchedAt": "2026-09-26T11:46:12.000Z",
+    "transcriptsCount": 6,
+    "peakVocalStressScore": 98
+  }
+]

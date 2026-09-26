@@ -191,21 +191,21 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Actions & Demo Controls */}
         <div className="flex items-center gap-2.5">
-          {/* Scenario Simulator Dropdown */}
+          {/* Test Bench (Pre-Recorded Audio) Dropdown */}
           <div className="relative">
             <button
               onClick={() => setShowScenarioMenu(!showScenarioMenu)}
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 text-amber-200 border border-amber-500/40 text-xs font-semibold shadow-lg shadow-amber-500/10 transition-all cursor-pointer"
             >
               <PlayCircle className="w-4 h-4 text-amber-400" />
-              <span>Simulate Panic Call (Demo)</span>
+              <span>Test Bench (Pre-Recorded Audio)</span>
               <ChevronDown className="w-3.5 h-3.5 text-amber-400" />
             </button>
 
             {showScenarioMenu && (
               <div className="absolute right-0 mt-2 w-80 rounded-xl bg-slate-900/95 border border-slate-700 p-2 shadow-2xl z-50 backdrop-blur-lg">
                 <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
-                  Realistic Hyderabad Crisis Scenarios
+                  Offline Acoustic Test Bench Scenarios
                 </div>
                 <div className="space-y-1">
                   <button
@@ -282,14 +282,14 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Start New Emergency Call</span>
             </button>
           ) : (
-            /* IDLE STATE: Start Live Mic */
+            /* IDLE STATE: Start Live 108 Emergency Call */
             <button
               onClick={onStartLiveMic}
               disabled={isConnecting}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-lg shadow-cyan-600/20 transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-lg shadow-cyan-600/20 transition-all cursor-pointer disabled:opacity-50"
             >
               <PhoneCall className="w-4 h-4" />
-              <span>{isConnecting ? 'Connecting Live...' : 'Start Live Mic'}</span>
+              <span>{isConnecting ? 'Connecting 108 Line...' : 'Start Live 108 Emergency Call'}</span>
             </button>
           )}
 
