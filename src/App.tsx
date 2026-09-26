@@ -91,7 +91,10 @@ export function App() {
     bargeInActive: false,
     bargeInCount: 0,
     audioInputLevel: 0,
-    audioOutputLevel: 0
+    audioOutputLevel: 0,
+    callDurationSeconds: 0,
+    callState: 'IDLE',
+    autoHangUpCountdown: null
   });
 
   const [prosody, setProsody] = useState<AcousticProsodyMetrics>(INITIAL_PROSODY);
@@ -103,6 +106,8 @@ export function App() {
     () => localStorage.getItem('gemini_api_key') || ((import.meta as any).env?.VITE_GEMINI_API_KEY as string) || ''
   );
 
+  const [autoHangUpCountdown, setAutoHangUpCountdown] = useState<number | null>(null);
+  const silenceTimerRef = useRef<number>(0);
   const audioStackRef = useRef<GeminiAudioStack | null>(null);
 
   useEffect(() => {
@@ -129,7 +134,6 @@ export function App() {
         }));
       },
       onAudioVisualizerData: (caller, gemini) => {
-        // Clone for React state update
         setCallerAudioData(new Uint8Array(caller));
         setGeminiAudioData(new Uint8Array(gemini));
       },
@@ -148,6 +152,72 @@ export function App() {
     };
   }, []);
 
+  // Sync call duration timer
+  useEffect(() => {
+    let interval: any = null;
+    if (telemetry.connectionStatus === 'CONNECTED') {
+      interval = setInterval(() => {
+        setTelemetry((t) => ({
+          ...t,
+          callDurationSeconds: (t.callDurationSeconds || 0) + 1,
+          callState: 'ACTIVE'
+        }));
+      }, 1000);
+    } else {
+      setTelemetry((t) => ({ ...t, callDurationSeconds: 0 }));
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [telemetry.connectionStatus]);
+
+  // Sync auto hang-up countdown state into telemetry
+  useEffect(() => {
+    setTelemetry((t) => ({ ...t, autoHangUpCountdown }));
+  }, [autoHangUpCountdown]);
+
+  // Auto Hang-off countdown decrementer (Trigger 1)
+  useEffect(() => {
+    if (autoHangUpCountdown === null) return;
+
+    if (autoHangUpCountdown > 0) {
+      const timer = setTimeout(() => {
+        setAutoHangUpCountdown((prev) => (prev !== null ? prev - 1 : null));
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (autoHangUpCountdown === 0) {
+      // Countdown reached 0: execute full teardown
+      handleStopCall();
+      setAutoHangUpCountdown(null);
+      setTelemetry((t) => ({ ...t, callState: 'FINALIZED' }));
+    }
+  }, [autoHangUpCountdown]);
+
+  // Silence watchdog timer (Trigger 2: auto-disconnect if silence for 15s after dispatch)
+  useEffect(() => {
+    let silenceInterval: any = null;
+    if (ticket.dispatchStatus === 'DISPATCHED' && telemetry.connectionStatus === 'CONNECTED') {
+      silenceInterval = setInterval(() => {
+        if (telemetry.audioInputLevel < 5) {
+          silenceTimerRef.current += 1;
+          if (silenceTimerRef.current >= 15) {
+            console.log('[AapadaLive] Silence timeout reached (15s post-dispatch) - auto hanging up');
+            handleStopCall();
+            setTelemetry((t) => ({ ...t, callState: 'FINALIZED' }));
+          }
+        } else {
+          silenceTimerRef.current = 0;
+        }
+      }, 1000);
+    } else {
+      silenceTimerRef.current = 0;
+    }
+
+    return () => {
+      if (silenceInterval) clearInterval(silenceInterval);
+    };
+  }, [ticket.dispatchStatus, telemetry.connectionStatus, telemetry.audioInputLevel]);
+
   const handleSetApiKey = (key: string) => {
     setApiKey(key);
     localStorage.setItem('gemini_api_key', key);
@@ -157,6 +227,7 @@ export function App() {
   };
 
   const handleStartLiveMic = () => {
+    setTelemetry((t) => ({ ...t, callState: 'ACTIVE' }));
     if (audioStackRef.current) {
       audioStackRef.current.connectLiveSession();
     }
@@ -166,9 +237,39 @@ export function App() {
     if (audioStackRef.current) {
       audioStackRef.current.stopCall();
     }
+    setAutoHangUpCountdown(null);
+    setTelemetry((t) => ({
+      ...t,
+      connectionStatus: 'DISCONNECTED',
+      interactionStatus: 'IDLE',
+      callState: 'FINALIZED',
+      autoHangUpCountdown: null,
+      audioInputLevel: 0,
+      audioOutputLevel: 0
+    }));
+  };
+
+  const handleStartNewCall = () => {
+    handleStopCall();
+    setTicket({
+      ...INITIAL_TRIAGE_TICKET,
+      ticketId: `HYD-108-${Date.now().toString().slice(-4)}`,
+      dispatchStatus: 'PENDING_APPROVAL',
+      timestamp: new Date().toLocaleTimeString(),
+      lastUpdated: new Date().toLocaleTimeString()
+    });
+    setProsody(INITIAL_PROSODY);
+    setAutoHangUpCountdown(null);
+    setTelemetry((t) => ({
+      ...t,
+      callState: 'IDLE',
+      callDurationSeconds: 0,
+      autoHangUpCountdown: null
+    }));
   };
 
   const handleStartScenario = (scenario: 'PVNR_ACCIDENT' | 'GACHIBOWLI_CARDIAC' | 'BALANAGAR_FIRE') => {
+    setTelemetry((t) => ({ ...t, callState: 'ACTIVE' }));
     if (audioStackRef.current) {
       audioStackRef.current.startSimulatedDemoCall(scenario);
     }
@@ -180,11 +281,28 @@ export function App() {
     }
   };
 
+  // Trigger 1: When dispatch is authorized, announce and trigger auto hang-off in 3s
   const handleDispatchTicket = () => {
     setTicket((prev) => ({
       ...prev,
       dispatchStatus: 'DISPATCHED'
     }));
+
+    // Announce via TTS
+    if (audioStackRef.current) {
+      audioStackRef.current.executeOneTapTTS({
+        id: 'tts-dispatch-announcement',
+        label: 'Dispatch Announcement',
+        language: 'English (Indian Accent)',
+        voice: 'Kore',
+        style: 'clear, professional, urgent priority dispatch command',
+        text: '108 Ambulance has been dispatched to your location. Help is on the way.',
+        category: 'DISPATCH_CONFIRM'
+      });
+    }
+
+    // Initiate 3s countdown to auto hang-off
+    setAutoHangUpCountdown(3);
   };
 
   return (
@@ -196,12 +314,13 @@ export function App() {
         onSetApiKey={handleSetApiKey}
         onStartLiveMic={handleStartLiveMic}
         onStopCall={handleStopCall}
+        onStartNewCall={handleStartNewCall}
         onStartScenario={handleStartScenario}
       />
 
       {/* Main 4-Zone Command Grid */}
       <main className="flex-1 p-3.5 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-3.5 max-w-[1920px] w-full mx-auto">
-        {/* Zone 1 (Left): Vocal Prosody & Acoustic Telemetry (3.5 cols on large screens) */}
+        {/* Zone 1 (Left): Vocal Prosody & Acoustic Telemetry */}
         <section className="lg:col-span-3 h-full overflow-hidden">
           <ProsodyZone
             prosody={prosody}
@@ -210,14 +329,14 @@ export function App() {
           />
         </section>
 
-        {/* Zone 2 (Center): Live Code-Switched Transcript & Translation Stream (5 cols) */}
+        {/* Zone 2 (Center): Live Code-Switched Transcript & Translation Stream */}
         <section className="lg:col-span-5 h-full overflow-hidden">
           <TranscriptZone
             transcripts={transcripts}
           />
         </section>
 
-        {/* Zone 3 (Right): Auto-Populating Incident Triage Ticket & One-Tap Actions (4 cols) */}
+        {/* Zone 3 (Right): Auto-Populating Incident Triage Ticket & One-Tap Actions */}
         <section className="lg:col-span-4 h-full overflow-hidden">
           <TriageZone
             ticket={ticket}

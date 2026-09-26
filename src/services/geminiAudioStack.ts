@@ -1011,6 +1011,7 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
       window.speechSynthesis.cancel();
     }
 
+    // Stop and disconnect all queued Web Audio sources
     for (const src of this.scheduledAudioSources) {
       try {
         src.stop();
@@ -1019,24 +1020,61 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
     }
     this.scheduledAudioSources = [];
 
+    // Stop and release all microphone tracks immediately
     if (this.micStream) {
-      this.micStream.getTracks().forEach((t) => t.stop());
+      this.micStream.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (e) {}
+      });
       this.micStream = null;
     }
 
+    // Disconnect audio nodes
+    if (this.scriptProcessorNode) {
+      try {
+        this.scriptProcessorNode.disconnect();
+        this.scriptProcessorNode.onaudioprocess = null;
+      } catch (e) {}
+      this.scriptProcessorNode = null;
+    }
+
+    if (this.micSourceNode) {
+      try {
+        this.micSourceNode.disconnect();
+      } catch (e) {}
+      this.micSourceNode = null;
+    }
+
+    // Close WebSocket cleanly with code 1000
     if (this.ws) {
       try {
-        this.ws.close();
+        this.ws.close(1000, "User terminated call");
       } catch (e) {}
       this.ws = null;
     }
 
+    // Reset visualizer and audio levels to zero
+    this.callerDataArray.fill(0);
+    this.geminiDataArray.fill(0);
+    this.callbacks.onAudioVisualizerData(this.callerDataArray, this.geminiDataArray);
+
+    if (this.audioContext) {
+      this.nextPlayTime = this.audioContext.currentTime;
+    }
+
     this.telemetry.connectionStatus = 'DISCONNECTED';
     this.telemetry.interactionStatus = 'IDLE';
+    this.telemetry.audioInputLevel = 0;
+    this.telemetry.audioOutputLevel = 0;
+    this.telemetry.bargeInActive = false;
+
     this.callbacks.onTelemetryUpdate({
       connectionStatus: 'DISCONNECTED',
       interactionStatus: 'IDLE',
-      bargeInActive: false
+      bargeInActive: false,
+      audioInputLevel: 0,
+      audioOutputLevel: 0
     });
   }
 

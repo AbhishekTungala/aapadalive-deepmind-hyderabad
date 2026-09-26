@@ -9,7 +9,9 @@ import {
   Key,
   Flame,
   Activity,
-  ChevronDown
+  ChevronDown,
+  Clock,
+  RotateCcw
 } from 'lucide-react';
 import type { SystemTelemetry } from '../types';
 
@@ -19,6 +21,7 @@ interface HeaderProps {
   onSetApiKey: (key: string) => void;
   onStartLiveMic: () => void;
   onStopCall: () => void;
+  onStartNewCall?: () => void;
   onStartScenario: (scenario: 'PVNR_ACCIDENT' | 'GACHIBOWLI_CARDIAC' | 'BALANAGAR_FIRE') => void;
 }
 
@@ -28,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSetApiKey,
   onStartLiveMic,
   onStopCall,
+  onStartNewCall,
   onStartScenario,
 }) => {
   const [showKeyModal, setShowKeyModal] = useState(false);
@@ -40,9 +44,38 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isConnected = telemetry.connectionStatus === 'CONNECTED';
   const isConnecting = telemetry.connectionStatus === 'CONNECTING';
+  const isFinalized = telemetry.callState === 'FINALIZED';
+
+  // Format call duration into MM:SS
+  const formatDuration = (totalSeconds: number = 0) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <header className="relative z-30 border-b border-slate-800 bg-[#080c14]/95 backdrop-blur px-4 py-2.5">
+      {/* Auto Hang-Off Countdown Banner */}
+      {telemetry.autoHangUpCountdown !== null && telemetry.autoHangUpCountdown !== undefined && (
+        <div className="absolute top-full left-0 right-0 z-50 bg-rose-600/30 border-b-2 border-rose-500 text-rose-200 px-4 py-2 flex items-center justify-between shadow-2xl backdrop-blur-md animate-pulse">
+          <div className="flex items-center gap-3">
+            <span className="p-1 px-2 rounded bg-rose-600 text-white font-extrabold text-xs tracking-wider">
+              AUTO HANG-OFF INITIATED
+            </span>
+            <div className="flex items-center gap-2">
+              <PhoneOff className="w-4 h-4 text-rose-400" />
+              <span className="text-xs font-semibold tracking-wide">
+                108 Dispatch Authorized: Dispatch announcement playing. Disconnecting line in{' '}
+                <span className="font-mono font-bold text-white text-sm underline">{telemetry.autoHangUpCountdown}s</span>...
+              </span>
+            </div>
+          </div>
+          <div className="text-xs font-mono text-rose-300">
+            Microphone & Web Audio buffer queue releasing
+          </div>
+        </div>
+      )}
+
       {/* Mid-Sentence Barge-In Interruption Banner */}
       {telemetry.bargeInActive && (
         <div className="absolute top-full left-0 right-0 z-50 bg-amber-500/20 border-b-2 border-amber-500 text-amber-200 px-4 py-2.5 flex items-center justify-between shadow-2xl backdrop-blur-md animate-pulse">
@@ -100,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="hidden lg:flex items-center gap-2 pl-4 border-l border-slate-800">
-            {/* Model Badge */}
+            {/* Model Badges */}
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900 border border-slate-700/60 text-[11px] font-mono text-cyan-300">
               <Cpu className="w-3.5 h-3.5 text-cyan-400" />
               <span>gemini-3.8-live</span>
@@ -132,6 +165,15 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Call Duration MM:SS Timer */}
+          {isConnected && (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-950/40 border border-rose-500/40 text-xs font-mono">
+              <Clock className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+              <span className="text-rose-300">Call Time:</span>
+              <span className="text-white font-bold">{formatDuration(telemetry.callDurationSeconds || 0)}</span>
+            </div>
+          )}
 
           {/* Latency */}
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-xs font-mono">
@@ -218,8 +260,29 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          {/* Live Mic Connection Button */}
-          {!isConnected ? (
+          {/* Call Control Button (Live Mic vs End Call vs Start New Call) */}
+          {isConnected ? (
+            /* ACTIVE CALL: High-visibility Red End Call / Hang Up Button with MM:SS duration */
+            <button
+              onClick={onStopCall}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-600/40 border border-rose-400/60 transition-all cursor-pointer animate-pulse"
+              title="Hang up call: Releases microphone, closes WebSocket, and stops audio buffers"
+            >
+              <PhoneOff className="w-4 h-4 text-white" />
+              <span>End Call / Hang Up ({formatDuration(telemetry.callDurationSeconds || 0)})</span>
+            </button>
+          ) : isFinalized ? (
+            /* FINALIZED STATE: Start New Emergency Call button */
+            <button
+              onClick={onStartNewCall}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 border border-emerald-400/50 transition-all cursor-pointer"
+              title="Reset triage ticket and start new call"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Start New Emergency Call</span>
+            </button>
+          ) : (
+            /* IDLE STATE: Start Live Mic */
             <button
               onClick={onStartLiveMic}
               disabled={isConnecting}
@@ -227,14 +290,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <PhoneCall className="w-4 h-4" />
               <span>{isConnecting ? 'Connecting Live...' : 'Start Live Mic'}</span>
-            </button>
-          ) : (
-            <button
-              onClick={onStopCall}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-lg shadow-rose-600/20 transition-all cursor-pointer"
-            >
-              <PhoneOff className="w-4 h-4" />
-              <span>End Call</span>
             </button>
           )}
 

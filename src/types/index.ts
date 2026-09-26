@@ -78,6 +78,9 @@ export interface SystemTelemetry {
   bargeInCount: number;
   audioInputLevel: number;
   audioOutputLevel: number;
+  callDurationSeconds?: number;
+  callState?: 'IDLE' | 'ACTIVE' | 'FINALIZED';
+  autoHangUpCountdown?: number | null;
 }
 
 // Runtime object exports so bundlers never fail on named imports
