@@ -112,6 +112,12 @@ export class GeminiAudioStack {
 
   private callbacks: AudioStackCallbacks;
   private apiKey: string = '';
+  public isAiSpeaking: boolean = false;
+  private isVoiceMuted: boolean = false;
+  private preferredLanguage: 'auto' | 'te' | 'hi' | 'en' = 'auto';
+  private activeAudioElement: HTMLAudioElement | null = null;
+  private lastProcessedUtterance: string = '';
+  private lastProcessedTime: number = 0;
   private isSimulating: boolean = false;
   private simulationIntervals: any[] = [];
   private demoOscillators: (OscillatorNode | AudioBufferSourceNode)[] = [];
@@ -132,6 +138,36 @@ export class GeminiAudioStack {
     } else {
       this.fetchRuntimeKey();
     }
+  }
+
+  public setVoiceMuted(muted: boolean): void {
+    this.isVoiceMuted = muted;
+    if (muted) {
+      this.stopAllAudioPlayback();
+    }
+  }
+
+  public isMuted(): boolean {
+    return this.isVoiceMuted;
+  }
+
+  public toggleVoiceMute(): boolean {
+    this.setVoiceMuted(!this.isVoiceMuted);
+    return this.isVoiceMuted;
+  }
+
+  public setLanguage(lang: 'auto' | 'te' | 'hi' | 'en'): void {
+    this.preferredLanguage = lang;
+    if (this.recognition) {
+      try {
+        this.recognition.abort();
+      } catch {}
+      this.startSpeechRecognition();
+    }
+  }
+
+  public getLanguage(): 'auto' | 'te' | 'hi' | 'en' {
+    return this.preferredLanguage;
   }
 
   public async fetchRuntimeKey(): Promise<string> {
@@ -568,17 +604,41 @@ When the user discusses plans, meetings, engineering tasks, or decisions, invoke
   }
 
   /**
-   * Crucial Requirement: Mid-sentence barge-in interruption.
-   * Flushes Web Audio API playback queue immediately & notifies UI banner.
+   * Central Audio Mutex: Cancels all speech synthesis and flushes active Web Audio sources
    */
-  public handleBargeInInterruption() {
+  public stopAllAudioPlayback(): void {
+    if (this.activeAudioElement) {
+      try {
+        this.activeAudioElement.pause();
+        this.activeAudioElement.currentTime = 0;
+        this.activeAudioElement.src = '';
+      } catch {}
+      this.activeAudioElement = null;
+    }
+
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
+
     for (const source of this.scheduledAudioSources) {
       try {
         source.stop();
         source.disconnect();
-      } catch (e) {}
+      } catch {}
     }
     this.scheduledAudioSources = [];
+    this.nextPlayTime = 0;
+    this.isAiSpeaking = false;
+  }
+
+  /**
+   * Crucial Requirement: Mid-sentence barge-in interruption.
+   * Flushes Web Audio API playback queue immediately & notifies UI banner.
+   */
+  public handleBargeInInterruption() {
+    this.stopAllAudioPlayback();
 
     if (this.audioContext) {
       this.nextPlayTime = this.audioContext.currentTime;
@@ -691,10 +751,18 @@ When the user discusses plans, meetings, engineering tasks, or decisions, invoke
    * Plays real 24kHz audio via Web Audio AudioContext (not window.speechSynthesis)
    */
   public async executeOneTapTTS(preset: TTSPreset): Promise<void> {
-    await this.ensureAudioContext();
-
     const cleanText = (preset.text || '').trim();
     if (!cleanText) return;
+
+    if (this.isVoiceMuted) {
+      return;
+    }
+
+    // Strict Audio Mutex: Cancel any ongoing audio first!
+    this.stopAllAudioPlayback();
+    this.isAiSpeaking = true;
+
+    await this.ensureAudioContext();
 
     const isTelugu = preset.category === 'TRANSLATION_TELUGU';
     const isHindi = preset.category === 'TRANSLATION_HINDI';
@@ -723,7 +791,7 @@ When the user discusses plans, meetings, engineering tasks, or decisions, invoke
       voiceStyleBadge: cleanBadge
     });
 
-    let playedViaWebAudio = false;
+    let playedViaAudio = false;
 
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -736,36 +804,56 @@ When the user discusses plans, meetings, engineering tasks, or decisions, invoke
         headers,
         body: JSON.stringify({
           text: cleanText,
+          lang: langTag,
           voiceName: preset.voice,
           stylePrompt: preset.style
         })
       });
 
       const data = await response.json();
-      if (data.audioBase64 && this.audioContext && this.geminiGainNode) {
-        const audioBufferData = this.base64ToArrayBuffer(data.audioBase64);
-        const decodedBuffer = await this.audioContext.decodeAudioData(audioBufferData);
-        const source = this.audioContext.createBufferSource();
-        source.buffer = decodedBuffer;
-        source.connect(this.geminiGainNode);
-        source.start();
-        this.scheduledAudioSources.push(source);
-        playedViaWebAudio = data.source === 'gemini-3.8-flash-tts';
+      if (data.audioBase64) {
+        const mimeType = data.mimeType || 'audio/mpeg';
+        const audioUri = `data:${mimeType};base64,${data.audioBase64}`;
+        const audio = new Audio(audioUri);
+        this.activeAudioElement = audio;
+
+        audio.onplay = () => {
+          this.isAiSpeaking = true;
+        };
+        audio.onended = () => {
+          this.isAiSpeaking = false;
+          this.activeAudioElement = null;
+        };
+        audio.onerror = () => {
+          this.isAiSpeaking = false;
+          this.activeAudioElement = null;
+        };
+
+        await audio.play();
+        playedViaAudio = true;
       }
     } catch (err) {
       console.warn('Backend TTS fetch error:', err);
     }
 
-    // Audible immediate playback via Web SpeechSynthesis if not played via Gemini Cloud TTS
-    if (!playedViaWebAudio && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    if (!playedViaAudio && !this.isVoiceMuted && typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
-        window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(cleanText);
         utter.lang = isTelugu ? 'te-IN' : isHindi ? 'hi-IN' : 'en-US';
         utter.rate = 1.0;
         utter.pitch = isTelugu ? 1.1 : isHindi ? 0.95 : 1.0;
+        utter.onstart = () => {
+          this.isAiSpeaking = true;
+        };
+        utter.onend = () => {
+          this.isAiSpeaking = false;
+        };
+        utter.onerror = () => {
+          this.isAiSpeaking = false;
+        };
         window.speechSynthesis.speak(utter);
       } catch (synthErr) {
+        this.isAiSpeaking = false;
         console.warn('SpeechSynthesis playback notice:', synthErr);
       }
     }
@@ -803,11 +891,24 @@ When the user discusses plans, meetings, engineering tasks, or decisions, invoke
       const recognition = new SpeechRec();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = 'en-IN';
+      if (this.preferredLanguage === 'te') {
+        recognition.lang = 'te-IN';
+      } else if (this.preferredLanguage === 'hi') {
+        recognition.lang = 'hi-IN';
+      } else if (this.preferredLanguage === 'en') {
+        recognition.lang = 'en-US';
+      } else {
+        recognition.lang = 'te-IN'; // Multi-regional default: te-IN allows Telugu or English words
+      }
 
       let currentUtteranceId = `live-utterance-${Date.now()}`;
 
       recognition.onresult = (event: any) => {
+        // Echo Cancellation: While AI is speaking through speakers, ignore interim recognition
+        if (this.isAiSpeaking && !event.results[event.resultIndex]?.isFinal) {
+          return;
+        }
+
         let interimTranscript = '';
         let finalTranscript = '';
 
@@ -823,7 +924,7 @@ When the user discusses plans, meetings, engineering tasks, or decisions, invoke
         const activeText = (finalTranscript || interimTranscript).trim();
         if (!activeText) return;
 
-        // Immediately stream user's real spoken words into UI
+        // Stream user's real spoken words into UI
         this.callbacks.onTranscriptReceived({
           id: currentUtteranceId,
           timestamp: new Date().toLocaleTimeString(),
@@ -835,9 +936,21 @@ When the user discusses plans, meetings, engineering tasks, or decisions, invoke
           isComplete: Boolean(finalTranscript)
         });
 
-        // When utterance is final, send to backend for NLP & Triage extraction
+        // When utterance is final, send to backend for deep AI NLP
         if (finalTranscript.trim()) {
           const finishedUtterance = finalTranscript.trim();
+          
+          // 2.5s Deduplication Lock: Ignore duplicate recognition bursts
+          const now = Date.now();
+          if (
+            finishedUtterance.toLowerCase() === this.lastProcessedUtterance.toLowerCase() &&
+            now - this.lastProcessedTime < 2500
+          ) {
+            return;
+          }
+          this.lastProcessedUtterance = finishedUtterance;
+          this.lastProcessedTime = now;
+
           currentUtteranceId = `live-utterance-${Date.now()}`;
           this.processSpokenUtterance(finishedUtterance);
         }
@@ -877,6 +990,7 @@ When the user discusses plans, meetings, engineering tasks, or decisions, invoke
         headers,
         body: JSON.stringify({
           transcript: spokenUtterance,
+          targetLanguage: this.preferredLanguage,
           acousticMetrics: this.currentProsody
         })
       });
@@ -889,32 +1003,49 @@ When the user discusses plans, meetings, engineering tasks, or decisions, invoke
       if (data.copilotReply && data.copilotReply.trim().length > 0) {
         const replyText = data.copilotReply.trim();
         const replyId = `gemini-${Date.now()}`;
+        const engTrans = data.copilotEnglishTranslation || data.englishTranslation || replyText;
+        const replyLang = data.replyLanguage || (this.preferredLanguage !== 'auto' ? this.preferredLanguage : 'en');
+        const badge = replyLang === 'te'
+          ? 'Voice: Telugu (తెలుగు) • Copilot Response'
+          : replyLang === 'hi'
+          ? 'Voice: Hindi (हिंदी) • Copilot Response'
+          : 'Voice: Kore • Copilot Response';
+
         this.callbacks.onTranscriptReceived({
           id: replyId,
           timestamp: new Date().toLocaleTimeString(),
           speaker: 'GEMINI_VOICE',
           originalText: replyText,
-          originalLanguage: 'en',
-          translatedText: replyText,
-          englishTranslation: replyText,
+          originalLanguage: replyLang,
+          translatedText: engTrans,
+          englishTranslation: engTrans,
           entities: this.extractEntities(replyText),
           isComplete: true,
-          voiceStyleBadge: 'Voice: Kore • Copilot Response'
+          voiceStyleBadge: badge
         });
 
-        this.speakCopilotResponse(replyText);
+        this.speakCopilotResponse(replyText, replyLang);
       }
     } catch (err) {
       console.warn('[VoxLive] Error processing spoken utterance:', err);
     }
   }
 
-  private async speakCopilotResponse(text: string) {
+  private async speakCopilotResponse(text: string, langCode: string = 'en') {
     const clean = (text || '').trim();
     if (!clean) return;
 
+    // If Voice is Muted by user toggle, silence and do not speak!
+    if (this.isVoiceMuted) {
+      return;
+    }
+
+    // Strict Audio Mutex: Silence any ongoing audio first!
+    this.stopAllAudioPlayback();
+    this.isAiSpeaking = true;
+
     await this.ensureAudioContext();
-    let playedViaWebAudio = false;
+    let playedViaAudioElement = false;
 
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -927,34 +1058,58 @@ When the user discusses plans, meetings, engineering tasks, or decisions, invoke
         headers,
         body: JSON.stringify({
           text: clean,
-          voiceName: 'Kore',
-          stylePrompt: 'clear, engaging, conversational collaborator'
+          lang: langCode,
+          voiceName: langCode === 'te' ? 'Aoede' : langCode === 'hi' ? 'Fenrir' : 'Kore',
+          stylePrompt: 'clear, engaging, natural conversational collaborator'
         })
       });
 
       const data = await response.json();
-      if (data.audioBase64 && this.audioContext && this.geminiGainNode) {
-        const audioBufferData = this.base64ToArrayBuffer(data.audioBase64);
-        const decodedBuffer = await this.audioContext.decodeAudioData(audioBufferData);
-        const source = this.audioContext.createBufferSource();
-        source.buffer = decodedBuffer;
-        source.connect(this.geminiGainNode);
-        source.start();
-        this.scheduledAudioSources.push(source);
-        playedViaWebAudio = data.source === 'gemini-3.8-flash-tts';
+      if (data.audioBase64) {
+        const mimeType = data.mimeType || 'audio/mpeg';
+        const audioUri = `data:${mimeType};base64,${data.audioBase64}`;
+        const audio = new Audio(audioUri);
+        this.activeAudioElement = audio;
+
+        audio.onplay = () => {
+          this.isAiSpeaking = true;
+        };
+        audio.onended = () => {
+          this.isAiSpeaking = false;
+          this.activeAudioElement = null;
+        };
+        audio.onerror = (e) => {
+          console.warn('[VoxLive] Audio playback error:', e);
+          this.isAiSpeaking = false;
+          this.activeAudioElement = null;
+        };
+
+        await audio.play();
+        playedViaAudioElement = true;
       }
     } catch (e) {
       console.warn('[VoxLive] Error playing copilot response:', e);
     }
 
-    if (!playedViaWebAudio && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    // Single-instance speech synthesis fallback if audio element did not play
+    if (!playedViaAudioElement && !this.isVoiceMuted && typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
-        window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(clean);
-        utter.rate = 1.05;
-        utter.pitch = 1.0;
+        utter.lang = langCode === 'te' ? 'te-IN' : langCode === 'hi' ? 'hi-IN' : 'en-US';
+        utter.rate = 1.0;
+        utter.pitch = langCode === 'te' ? 1.05 : 1.0;
+        utter.onstart = () => {
+          this.isAiSpeaking = true;
+        };
+        utter.onend = () => {
+          this.isAiSpeaking = false;
+        };
+        utter.onerror = () => {
+          this.isAiSpeaking = false;
+        };
         window.speechSynthesis.speak(utter);
       } catch (synthErr) {
+        this.isAiSpeaking = false;
         console.warn('SpeechSynthesis backup notice:', synthErr);
       }
     }
@@ -988,6 +1143,7 @@ When the user discusses plans, meetings, engineering tasks, or decisions, invoke
   }
 
   public stopCall() {
+    this.stopAllAudioPlayback();
     this.isSimulating = false;
     for (const timeout of this.simulationIntervals) {
       clearTimeout(timeout);

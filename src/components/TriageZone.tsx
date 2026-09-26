@@ -7,7 +7,8 @@ import {
   Globe2,
   ListTodo,
   Copy,
-  Layers
+  Layers,
+  Download
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { TriageTicket, TTSPreset, AcousticProsodyMetrics, SystemTelemetry } from '../types';
@@ -31,6 +32,7 @@ export const TriageZone: React.FC<TriageZoneProps> = ({
 }) => {
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
 
   const isConnected = telemetry.connectionStatus === 'CONNECTED';
   const hasVoiceContent = Boolean(
@@ -111,6 +113,48 @@ export const TriageZone: React.FC<TriageZoneProps> = ({
     } catch {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
+  // Download live CSV dataset
+  const handleDownloadCsv = async () => {
+    setDownloadingCsv(true);
+    try {
+      const res = await fetch('/api/dataset/csv');
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `live_voice_telemetry_${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      } else {
+        throw new Error('Fallback to client CSV');
+      }
+    } catch {
+      const headers = 'timestamp,speaker_language,original_transcript,english_translation,pitch_hz,speech_rate_wpm,snr_db,vocal_energy_pct,detected_intent,structured_action,ai_response\n';
+      const actions = (ticket.structuredActions || []).join('; ').replace(/"/g, '""');
+      const row = `"${new Date().toISOString()}","${activeLanguage}","${(ticket.topicSummary || '').replace(/"/g, '""')}","${(ticket.topicSummary || '').replace(/"/g, '""')}",${prosody.f0Hz || prosody.pitchVarianceHz || 120},${prosody.speechRateWpm || 130},${prosody.snrDb || 18},${prosody.stressScore || 45},"${ticket.detectedIntent || 'General Discussion'}","${actions}","Live voice telemetry snapshot"\n`;
+      const blob = new Blob([headers + row], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `live_voice_telemetry_${Date.now()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } finally {
+      confetti({
+        particleCount: 70,
+        spread: 70,
+        origin: { y: 0.8 },
+        colors: ['#10b981', '#06b6d4', '#3b82f6']
+      });
+      setTimeout(() => setDownloadingCsv(false), 1500);
     }
   };
 
@@ -288,23 +332,43 @@ export const TriageZone: React.FC<TriageZoneProps> = ({
           </div>
         </div>
 
-        {/* Bottom Button: Export Structured Voice Actions */}
-        <button
-          onClick={handleExportActions}
-          className="w-full py-3 px-4 rounded-xl font-mono font-black text-xs tracking-wider uppercase transition-all shadow-[0_0_25px_rgba(6,182,212,0.35)] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer mt-1 bg-gradient-to-r from-cyan-600 via-teal-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-slate-950 font-bold border border-cyan-400/40"
-        >
-          {copied ? (
-            <>
-              <CheckCircle2 className="w-4 h-4 text-slate-950" />
-              <span>COPIED TO CLIPBOARD (JSON)</span>
-            </>
-          ) : (
-            <>
-              <Copy className="w-4 h-4 text-slate-950" />
-              <span>EXPORT STRUCTURED VOICE ACTIONS (JSON / CLIPBOARD)</span>
-            </>
-          )}
-        </button>
+        {/* Bottom Buttons: Live CSV Dataset Export & Structured Voice Actions */}
+        <div className="flex flex-col gap-2 mt-1">
+          <button
+            onClick={handleDownloadCsv}
+            disabled={downloadingCsv}
+            className="w-full py-2.5 px-4 rounded-xl font-mono font-black text-xs tracking-wider uppercase transition-all shadow-[0_0_20px_rgba(16,185,129,0.35)] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-bold border border-emerald-400/50"
+          >
+            {downloadingCsv ? (
+              <>
+                <CheckCircle2 className="w-4 h-4 text-slate-950 animate-spin" />
+                <span>GENERATING LIVE CSV...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 text-slate-950" />
+                <span>EXPORT LIVE VOICE CSV DATASET (.CSV)</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleExportActions}
+            className="w-full py-2 px-3 rounded-lg font-mono font-bold text-[11px] tracking-wide uppercase transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer bg-[#0a131f]/90 hover:bg-[#16273c] text-cyan-300 border border-[#1e3a5f]/60 hover:border-cyan-400/50"
+          >
+            {copied ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>COPIED ACTIONS TO CLIPBOARD (JSON)</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5 text-cyan-400" />
+                <span>COPY STRUCTURED ACTIONS (JSON)</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

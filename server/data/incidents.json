@@ -1,5 +1,1067 @@
 [
   {
+    "id": "VOX-6936",
+    "createdAt": "2026-09-26T12:18:06.937Z",
+    "transcript": "Hello I'm how can I assist you with your projects analysis or tasks today hello I am it with accident in banjarat's Road number two can you send me an ambulance at prayer",
+    "englishTranslation": "Hello I'm how can I assist you with your projects analysis or tasks today hello I am it with accident in banjarat's Road number two can you send me an ambulance at prayer",
+    "intent": "Task / Action Request",
+    "actions": [
+      "Dispatch emergency medical services and ambulance to Banjara Hills Road Number 2",
+      "Maintain contact with caller and provide immediate first-aid guidance"
+    ],
+    "entities": [
+      {
+        "text": "ambulance",
+        "type": "ACTION"
+      },
+      {
+        "text": "Banjara Hills Road Number 2",
+        "type": "LOCATION"
+      },
+      {
+        "text": "accident",
+        "type": "TOPIC"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 0,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-6969",
+    "createdAt": "2026-09-26T12:17:46.971Z",
+    "transcript": "Hello",
+    "englishTranslation": "Hello",
+    "intent": "General Discussion",
+    "actions": [
+      "Identify current user objective or inquiry",
+      "Select relevant technical domain or task framework"
+    ],
+    "entities": [
+      {
+        "text": "greeting",
+        "type": "TOPIC"
+      },
+      {
+        "text": "assistance",
+        "type": "ACTION"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 44,
+      "pitchVarianceHz": 320,
+      "speechRateWpm": 130,
+      "snrDb": 8,
+      "peakDb": 8,
+      "f0Hz": 410,
+      "jitterPercent": 1,
+      "acousticClarity": 71,
+      "voiceConfidence": 78,
+      "detectedTags": [
+        {
+          "id": "tremor",
+          "label": "Elevated Pitch Tremor / Panic Acoustic Signature",
+          "severity": "critical",
+          "confidence": 0.92,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-7413",
+    "createdAt": "2026-09-26T11:57:17.414Z",
+    "transcript": "అర్థం చేసుకున్నాను",
+    "englishTranslation": "I understand",
+    "intent": "General Discussion",
+    "actions": [
+      "Confirm readiness to transition to the subsequent agenda item",
+      "Provide additional context or initiate next steps upon user prompt"
+    ],
+    "entities": [
+      {
+        "text": "comprehension confirmation",
+        "type": "TOPIC"
+      },
+      {
+        "text": "next steps",
+        "type": "ACTION"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 33,
+      "pitchVarianceHz": 320,
+      "speechRateWpm": 122,
+      "snrDb": 8,
+      "peakDb": 2,
+      "f0Hz": 809,
+      "jitterPercent": 1,
+      "acousticClarity": 71,
+      "voiceConfidence": 78,
+      "detectedTags": [
+        {
+          "id": "tremor",
+          "label": "Elevated Pitch Tremor / Panic Acoustic Signature",
+          "severity": "critical",
+          "confidence": 0.92,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-3284",
+    "createdAt": "2026-09-26T11:57:03.285Z",
+    "transcript": "దయచేసి ప్రశాంతంగా ఉండండి లైన్ తెరిచి ఉంచండి మరియు వీలైతే సురక్షితమైన ప్రదేశంలో ఉండండి",
+    "englishTranslation": "Please keep calm keep the line open and stay in a safe place if possible",
+    "intent": "Task / Action Request",
+    "actions": [
+      "Maintain an active, low-latency audio connection",
+      "Remain in a secure, protected area until cleared",
+      "Report changes in surroundings or request emergency dispatch if necessary"
+    ],
+    "entities": [
+      {
+        "text": "line open",
+        "type": "ACTION"
+      },
+      {
+        "text": "safe place",
+        "type": "LOCATION"
+      },
+      {
+        "text": "audio connection",
+        "type": "TOPIC"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 0,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-7398",
+    "createdAt": "2026-09-26T11:56:37.398Z",
+    "transcript": "ఐ మెట్రి టాక్స్రెంట్ ఇన్ ద బేగంపేట రూట్ కెన్ యు కాంటాక్ట్ నియర్ బై హాస్పిటల్స్ అండ్ కెన్ యు సెండ్ మీ ద అంబులెన్స్ ఎట్ ప్రేయర్",
+    "englishTranslation": "I metri taxrent in the begumpet route can u contact near by hospitals and can u send me the ambulance at prayer",
+    "intent": "Task / Action Request",
+    "actions": [
+      "Dispatch emergency medical services and ambulance to the Begumpet accident location",
+      "Alert nearest hospitals around Begumpet including emergency trauma units",
+      "Maintain live connection with the user for real-time location tracking"
+    ],
+    "entities": [
+      {
+        "text": "accident",
+        "type": "TOPIC"
+      },
+      {
+        "text": "Begumpet route",
+        "type": "LOCATION"
+      },
+      {
+        "text": "ambulance",
+        "type": "ACTION"
+      },
+      {
+        "text": "hospitals",
+        "type": "ORGANIZATION"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 1,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-1880",
+    "createdAt": "2026-09-26T11:55:31.882Z",
+    "transcript": "से क्रिया में आपके",
+    "englishTranslation": "In the verb from your",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Prompt user to specify the intended verb or linguistic query",
+      "Prepare grammatical analysis and conjugation details upon clarification"
+    ],
+    "entities": [
+      {
+        "text": "verb",
+        "type": "TOPIC"
+      },
+      {
+        "text": "grammatical analysis",
+        "type": "ACTION"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 36,
+      "pitchVarianceHz": 320,
+      "speechRateWpm": 124,
+      "snrDb": 8,
+      "peakDb": 3,
+      "f0Hz": 445,
+      "jitterPercent": 1,
+      "acousticClarity": 71,
+      "voiceConfidence": 78,
+      "detectedTags": [
+        {
+          "id": "tremor",
+          "label": "Elevated Pitch Tremor / Panic Acoustic Signature",
+          "severity": "critical",
+          "confidence": 0.92,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-7086",
+    "createdAt": "2026-09-26T11:55:27.088Z",
+    "transcript": "ऐसा लगता है जैसे आपका वाक्य छोटा कर दिया गया आप विशेष रूप",
+    "englishTranslation": "It seems like your sentence was cut short.",
+    "intent": "General Discussion",
+    "actions": [
+      "Re-evaluate audio transmission buffer to prevent truncation",
+      "Prompt the user to confirm the missing context for full resolution"
+    ],
+    "entities": [
+      {
+        "text": "sentence truncation",
+        "type": "TOPIC"
+      },
+      {
+        "text": "audio output",
+        "type": "TOPIC"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 1,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-5592",
+    "createdAt": "2026-09-26T11:55:15.593Z",
+    "transcript": "बिना",
+    "englishTranslation": "Without",
+    "intent": "General Discussion",
+    "actions": [
+      "Prompt user to clarify what should be excluded or omitted",
+      "Await user completion of the thought"
+    ],
+    "entities": [
+      {
+        "text": "clarification",
+        "type": "ACTION"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 38,
+      "pitchVarianceHz": 320,
+      "speechRateWpm": 126,
+      "snrDb": 8,
+      "peakDb": 5,
+      "f0Hz": 715,
+      "jitterPercent": 1,
+      "acousticClarity": 71,
+      "voiceConfidence": 78,
+      "detectedTags": [
+        {
+          "id": "tremor",
+          "label": "Elevated Pitch Tremor / Panic Acoustic Signature",
+          "severity": "critical",
+          "confidence": 0.92,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-5026",
+    "createdAt": "2026-09-26T11:55:05.027Z",
+    "transcript": "मेरा पैर टूट गया मैं उसके लिए क्या कर सकता हूं",
+    "englishTranslation": "I broke my leg what can I do for it",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Contact emergency medical services or head to the nearest urgent care facility immediately",
+      "Immobilize the injured leg and avoid putting any weight or pressure on it",
+      "Apply a cloth-wrapped ice pack to reduce swelling and alleviate pain"
+    ],
+    "entities": [
+      {
+        "text": "broken leg",
+        "type": "TOPIC"
+      },
+      {
+        "text": "emergency medical services",
+        "type": "ACTION"
+      },
+      {
+        "text": "immobilization",
+        "type": "ACTION"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 1,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-6017",
+    "createdAt": "2026-09-26T11:52:46.019Z",
+    "transcript": "हेलो मेरी चोट लगी है मैं कैसे और उसका समाधान बता सकता हूं",
+    "englishTranslation": "Hello, I am injured, how can I tell you the solution?",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Describe immediate symptoms and injury severity",
+      "Contact local emergency medical services if critical",
+      "Listen to immediate first-aid instructions"
+    ],
+    "entities": [
+      {
+        "text": "injury",
+        "type": "TOPIC"
+      },
+      {
+        "text": "first-aid guidance",
+        "type": "ACTION"
+      },
+      {
+        "text": "emergency services",
+        "type": "ORGANIZATION"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 32,
+      "pitchVarianceHz": 320,
+      "speechRateWpm": 122,
+      "snrDb": 8,
+      "peakDb": 1,
+      "f0Hz": 609,
+      "jitterPercent": 1,
+      "acousticClarity": 71,
+      "voiceConfidence": 78,
+      "detectedTags": [
+        {
+          "id": "tremor",
+          "label": "Elevated Pitch Tremor / Panic Acoustic Signature",
+          "severity": "critical",
+          "confidence": 0.92,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-3533",
+    "createdAt": "2026-09-26T11:52:03.535Z",
+    "transcript": "सेकेंड्स सो नो आईटी'एस सो वर्किंग वे इंटीग्रेटेड एंड अदर आईपी कस्टमर केयर विल इंटीग्रेटेड नो आईटी'एस वर्किंग",
+    "englishTranslation": "Seconds So No IT's So Working They're Integrated and Other IPs Customer Care Will Integrated No It's Working",
+    "intent": "Technical Discussion",
+    "actions": [
+      "Verify endpoint connectivity and data synchronization between IT and customer care systems",
+      "Monitor latency and throughput across newly integrated IP telephony channels"
+    ],
+    "entities": [
+      {
+        "text": "Customer Care",
+        "type": "ORGANIZATION"
+      },
+      {
+        "text": "IP Integration",
+        "type": "TOPIC"
+      },
+      {
+        "text": "IT Systems",
+        "type": "TOPIC"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 1,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-5111",
+    "createdAt": "2026-09-26T11:51:35.113Z",
+    "transcript": "व्हाट आर द नियरेस्ट अस्पताल तो में आई एम इन एमरजैंसी राइट नाउ इन बंजारा हिल्स रोड नंबर 2",
+    "englishTranslation": "What is the nearest hospital so I am in emergency right now in Banjara Hills Road No. 2",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Head immediately to Basavatarakam or Care Hospital emergency casualty ward",
+      "Call emergency ambulance services at 108 or 112 without delay",
+      "Notify an emergency contact of your current location on Banjara Hills Road No. 2"
+    ],
+    "entities": [
+      {
+        "text": "Banjara Hills Road No. 2",
+        "type": "LOCATION"
+      },
+      {
+        "text": "Emergency Medical Services",
+        "type": "TOPIC"
+      },
+      {
+        "text": "Basavatarakam Hospital",
+        "type": "ORGANIZATION"
+      },
+      {
+        "text": "Care Hospitals",
+        "type": "ORGANIZATION"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 1,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-2692",
+    "createdAt": "2026-09-26T11:51:02.693Z",
+    "transcript": "चारमीनार का आसपास क्या रहता बोल दिया था जल्दी बोलो",
+    "englishTranslation": "I told you what is around Charminar, tell me quickly.",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Explore Laad Bazaar for traditional lac bangles and pearls",
+      "Visit Mecca Masjid and Chowmahalla Palace nearby",
+      "Sample local culinary specialties like Irani chai and Hyderabadi street food"
+    ],
+    "entities": [
+      {
+        "text": "Charminar",
+        "type": "LOCATION"
+      },
+      {
+        "text": "Mecca Masjid",
+        "type": "LOCATION"
+      },
+      {
+        "text": "Laad Bazaar",
+        "type": "LOCATION"
+      },
+      {
+        "text": "Chowmahalla Palace",
+        "type": "LOCATION"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 1,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-8301",
+    "createdAt": "2026-09-26T11:49:38.302Z",
+    "transcript": "హలో వాట్ ఇస్ ది ప్రెసెంట్ కండిషన్ ఆఫ్ ది హైదరాబాద్",
+    "englishTranslation": "Hello what is the present condition of the Hyderabad",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Check real-time weather metrics and air quality index for Hyderabad",
+      "Monitor live arterial traffic and commute alerts across Hyderabad"
+    ],
+    "entities": [
+      {
+        "text": "Hyderabad",
+        "type": "LOCATION"
+      },
+      {
+        "text": "present condition",
+        "type": "TOPIC"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 33,
+      "pitchVarianceHz": 320,
+      "speechRateWpm": 122,
+      "snrDb": 8,
+      "peakDb": 2,
+      "f0Hz": 504,
+      "jitterPercent": 1,
+      "acousticClarity": 71,
+      "voiceConfidence": 78,
+      "detectedTags": [
+        {
+          "id": "tremor",
+          "label": "Elevated Pitch Tremor / Panic Acoustic Signature",
+          "severity": "critical",
+          "confidence": 0.92,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-8889",
+    "createdAt": "2026-09-26T11:48:18.889Z",
+    "transcript": "మన ప్రాజెక్ట్ ఎలా పనిచేస్తుందో తెలుగులో చెప్పండి",
+    "englishTranslation": "Tell us how our project works in Telugu",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Verify regional Telugu dialect modeling against the 95.1% ASR accuracy benchmark",
+      "Monitor conversational code-switching performance against the 41.8 BLEU threshold",
+      "Document the end-to-end Telugu voice processing pipeline for stakeholder review"
+    ],
+    "entities": [
+      {
+        "text": "Telugu",
+        "type": "TOPIC"
+      },
+      {
+        "text": "Telugu ASR Accuracy",
+        "type": "METRIC"
+      },
+      {
+        "text": "Code-Switching BLEU Score",
+        "type": "METRIC"
+      }
+    ],
+    "acousticMetrics": null
+  },
+  {
+    "id": "VOX-4872",
+    "createdAt": "2026-09-26T11:48:14.903Z",
+    "transcript": "Artificial intelligence hamare kaam ko kaise aasan bana sakta hai?",
+    "englishTranslation": "How can Artificial Intelligence make our work easier?",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Identify repetitive operational processes suitable for automated AI assistance",
+      "Evaluate AI copilots to scale real-time task handling and data analysis"
+    ],
+    "entities": [
+      {
+        "text": "Artificial Intelligence",
+        "type": "TOPIC"
+      },
+      {
+        "text": "workflow automation",
+        "type": "TOPIC"
+      },
+      {
+        "text": "productivity",
+        "type": "METRIC"
+      }
+    ],
+    "acousticMetrics": null
+  },
+  {
+    "id": "VOX-6289",
+    "createdAt": "2026-09-26T11:39:46.289Z",
+    "transcript": "మన ప్రాజెక్ట్ ఎలా పనిచేస్తుందో తెలుగులో చెప్పండి",
+    "englishTranslation": "Tell me in Telugu how our project works.",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Provide a detailed workflow breakdown of the voice copilot architecture in Telugu",
+      "Share technical documentation covering real-time multilingual speech processing"
+    ],
+    "entities": [
+      {
+        "text": "మన ప్రాజెక్ట్",
+        "type": "TOPIC"
+      },
+      {
+        "text": "తెలుగు",
+        "type": "TOPIC"
+      }
+    ],
+    "acousticMetrics": null
+  },
+  {
+    "id": "VOX-2615",
+    "createdAt": "2026-09-26T11:39:42.615Z",
+    "transcript": "Artificial intelligence hamare kaam ko kaise aasan bana sakta hai?",
+    "englishTranslation": "How can artificial intelligence make our work easier?",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Identify repetitive daily workflows suitable for AI automation",
+      "Integrate generative AI assistants for document drafting and data synthesis"
+    ],
+    "entities": [
+      {
+        "text": "Artificial intelligence",
+        "type": "TOPIC"
+      },
+      {
+        "text": "40% productivity boost",
+        "type": "METRIC"
+      }
+    ],
+    "acousticMetrics": null
+  },
+  {
+    "id": "VOX-5525",
+    "createdAt": "2026-09-26T11:27:05.526Z",
+    "transcript": "There is the cloud integration but it is not working",
+    "englishTranslation": "There is the cloud integration but it is not working",
+    "intent": "Technical Discussion",
+    "actions": [
+      "Verify API authentication credentials and endpoint health for the cloud integration",
+      "Inspect edge CDN TTFB to ensure response latency remains under 45 ms",
+      "Review system logs for network timeout or handshake failures"
+    ],
+    "entities": [
+      {
+        "text": "cloud integration",
+        "type": "TOPIC"
+      },
+      {
+        "text": "Edge CDN TTFB",
+        "type": "METRIC"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 57,
+      "pitchVarianceHz": 320,
+      "speechRateWpm": 139,
+      "snrDb": 8,
+      "peakDb": 15,
+      "f0Hz": 1336,
+      "jitterPercent": 2,
+      "acousticClarity": 71,
+      "voiceConfidence": 78,
+      "detectedTags": [
+        {
+          "id": "tremor",
+          "label": "Elevated Pitch Tremor / Panic Acoustic Signature",
+          "severity": "critical",
+          "confidence": 0.92,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-5283",
+    "createdAt": "2026-09-26T11:25:45.284Z",
+    "transcript": "I will notify you the moment it arrives so we can get started right away",
+    "englishTranslation": "I will notify you the moment it arrives so we can get started right away.",
+    "intent": "Task / Action Request",
+    "actions": [
+      "Await user notification upon arrival",
+      "Prepare immediate task kickoff upon confirmation"
+    ],
+    "entities": [
+      {
+        "text": "arrival notification",
+        "type": "ACTION"
+      },
+      {
+        "text": "task kickoff",
+        "type": "ACTION"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 57,
+      "pitchVarianceHz": 320,
+      "speechRateWpm": 139,
+      "snrDb": 8,
+      "peakDb": 15,
+      "f0Hz": 2227,
+      "jitterPercent": 2,
+      "acousticClarity": 71,
+      "voiceConfidence": 78,
+      "detectedTags": [
+        {
+          "id": "tremor",
+          "label": "Elevated Pitch Tremor / Panic Acoustic Signature",
+          "severity": "critical",
+          "confidence": 0.92,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-4878",
+    "createdAt": "2026-09-26T11:25:24.879Z",
+    "transcript": "And let me know as soon as it arrives so we can Dive Right In",
+    "englishTranslation": "And let me know as soon as it arrives so we can Dive Right In",
+    "intent": "Task / Action Request",
+    "actions": [
+      "Configure an immediate alert trigger for the expected arrival",
+      "Prepare workspace and relevant context to begin work without delay"
+    ],
+    "entities": [
+      {
+        "text": "arrival notification",
+        "type": "ACTION"
+      },
+      {
+        "text": "immediate start",
+        "type": "TOPIC"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 1,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-8832",
+    "createdAt": "2026-09-26T11:25:18.833Z",
+    "transcript": "Experiencing stable Urban conditions and study activity across its major idea corridors would you like specific real-time information regarding its current",
+    "englishTranslation": "Experiencing stable urban conditions and steady activity across its major corridors, would you like specific real-time information regarding its current status?",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Retrieve current transit and activity data for key urban corridors",
+      "Analyze real-time operational metrics against standard baseline benchmarks"
+    ],
+    "entities": [
+      {
+        "text": "Urban conditions",
+        "type": "TOPIC"
+      },
+      {
+        "text": "corridors",
+        "type": "LOCATION"
+      },
+      {
+        "text": "real-time information",
+        "type": "TOPIC"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 0,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-3548",
+    "createdAt": "2026-09-26T11:25:03.549Z",
+    "transcript": "It's coming bro now",
+    "englishTranslation": "It's coming bro now.",
+    "intent": "General Discussion",
+    "actions": [
+      "Stand by for incoming stream or deliverable",
+      "Initiate next review step immediately upon arrival"
+    ],
+    "entities": [
+      {
+        "text": "incoming item",
+        "type": "TOPIC"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 69,
+      "pitchVarianceHz": 320,
+      "speechRateWpm": 148,
+      "snrDb": 8,
+      "peakDb": 22,
+      "f0Hz": 949,
+      "jitterPercent": 3,
+      "acousticClarity": 71,
+      "voiceConfidence": 78,
+      "detectedTags": [
+        {
+          "id": "tremor",
+          "label": "Elevated Pitch Tremor / Panic Acoustic Signature",
+          "severity": "critical",
+          "confidence": 0.92,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-5106",
+    "createdAt": "2026-09-26T11:24:45.107Z",
+    "transcript": "What is the present condition of the Hyderabad",
+    "englishTranslation": "What is the present condition of Hyderabad?",
+    "intent": "Question / Inquiry",
+    "actions": [
+      "Check real-time weather conditions and forecasts for Hyderabad",
+      "Monitor live civic traffic and transit advisories across the metropolitan area"
+    ],
+    "entities": [
+      {
+        "text": "Hyderabad",
+        "type": "LOCATION"
+      },
+      {
+        "text": "present condition",
+        "type": "TOPIC"
+      }
+    ],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 0,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "VOX-8757",
+    "createdAt": "2026-09-26T11:23:08.757Z",
+    "transcript": "How does the real-time CSV dataset engine capture vocal prosody and pitch?",
+    "englishTranslation": "How does the real-time CSV dataset engine capture vocal prosody and pitch?",
+    "intent": "Technical Discussion",
+    "actions": [
+      "Implement 1,024-sample FFT windowing for vocal harmonic and pitch tracking",
+      "Ensure microphone input is sampled at the baseline 16,000 Hz standard",
+      "Monitor real-time spectral metrics to evaluate vocal inflections"
+    ],
+    "entities": [
+      {
+        "text": "vocal prosody",
+        "type": "TOPIC"
+      },
+      {
+        "text": "pitch",
+        "type": "TOPIC"
+      },
+      {
+        "text": "FFT Window Size",
+        "type": "METRIC"
+      },
+      {
+        "text": "1024 samples",
+        "type": "METRIC"
+      },
+      {
+        "text": "Microphone Sample Rate",
+        "type": "METRIC"
+      }
+    ],
+    "acousticMetrics": {
+      "f0Hz": 145,
+      "speechRateWpm": 135,
+      "snrDb": 24,
+      "stressScore": 65
+    }
+  },
+  {
+    "id": "VOX-4229",
+    "createdAt": "2026-09-26T11:23:04.274Z",
+    "transcript": "మీ సిస్టమ్ యొక్క ఆడియో లేటెన్సీ మరియు సాఫ్ట్‌వేర్ స్పెక్స్ ఏమిటి?",
+    "englishTranslation": "What are your system's audio latency and software specs?",
+    "intent": "Technical Discussion",
+    "actions": [
+      "Benchmark real-time end-to-end WebRTC latency metrics",
+      "Evaluate neural speech model specifications and server infrastructure"
+    ],
+    "entities": [
+      {
+        "text": "audio latency",
+        "type": "METRIC"
+      },
+      {
+        "text": "software specs",
+        "type": "TOPIC"
+      }
+    ],
+    "acousticMetrics": {
+      "f0Hz": 145,
+      "speechRateWpm": 135,
+      "snrDb": 24,
+      "stressScore": 65
+    }
+  },
+  {
+    "id": "VOX-3516",
+    "createdAt": "2026-09-26T10:04:13.572Z",
+    "transcript": "10 Karenge",
+    "englishTranslation": "10 feet",
+    "intent": "General Discussion",
+    "actions": [
+      "Track spoken note: \"10 feet\""
+    ],
+    "entities": [],
+    "acousticMetrics": {
+      "stressScore": 0,
+      "pitchVarianceHz": 0,
+      "speechRateWpm": 0,
+      "snrDb": 0,
+      "peakDb": 0,
+      "f0Hz": 0,
+      "jitterPercent": 0,
+      "acousticClarity": 95,
+      "voiceConfidence": 80,
+      "detectedTags": [
+        {
+          "id": "ambient",
+          "label": "Ambient Silence / Line Open",
+          "severity": "info",
+          "confidence": 0.99,
+          "active": true
+        }
+      ]
+    }
+  },
+  {
     "id": "VOX-1270",
     "createdAt": "2026-09-26T09:52:01.270Z",
     "transcript": "problem",

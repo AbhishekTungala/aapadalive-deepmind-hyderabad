@@ -1,0 +1,51 @@
+id,category,metric_name,benchmark_value,optimal_range,unit,operational_notes
+KB-001,Latency,Audio Packet Latency,18,10-25,ms,Raw 16kHz PCM audio buffer chunking time for edge stream
+KB-002,Latency,Speech-to-Text TTFT,120,80-160,ms,Whisper/Gemini 3.5 live transcription time-to-first-token
+KB-003,Latency,LLM Response TTFT,280,150-350,ms,Gemini Flash / Pollinations reasoning generation time
+KB-004,Latency,TTS Audio Synthesis,95,60-140,ms,Gemini 3.8 Flash TTS / Web Audio playback initiation
+KB-005,Latency,End-to-End Voice Round-Trip,513,300-650,ms,Full conversational turn-taking latency across WebSocket
+KB-006,Audio,Microphone Sample Rate,16000,16000-48000,Hz,Standard telephony and speech recognition acoustic rate
+KB-007,Audio,Output Sample Rate,24000,24000-48000,Hz,High-fidelity voice synthesis reproduction rate
+KB-008,Audio,Acoustic SNR Baseline,22,15-35,dB,Signal-to-noise ratio in active workspace environment
+KB-009,Audio,FFT Window Size,1024,512-2048,samples,Fast Fourier Transform size for vocal harmonic analysis
+KB-010,Audio,Pitch Variance Threshold,85,40-120,Hz,Standard deviation of F0 indicating expressive conversational prosody
+KB-011,Prosody,Resting Fundamental Frequency F0,145,85-255,Hz,Human vocal cords resting vibration frequency
+KB-012,Prosody,Elevated Stress F0 Threshold,280,240-360,Hz,Elevated pitch indicator of urgency or acute vocal strain
+KB-013,Prosody,Standard Speech Rate,135,110-165,WPM,Words per minute in normal conversational dialogue
+KB-014,Prosody,Urgent Speech Rate,185,170-220,WPM,Accelerated speech rate indicating high cognitive demand
+KB-015,Prosody,Acoustic Clarity Index,92,80-99,%,Spectral clarity derived from harmonic-to-noise ratio
+KB-016,Prosody,Jitter Percentage,0.8,0.2-1.5,%,Cycle-to-cycle pitch period fluctuation
+KB-017,Prosody,Shimmer Amplitude Variance,2.1,1.0-3.5,%,Cycle-to-cycle waveform amplitude fluctuation
+KB-018,Bilingual,Hindi ASR Accuracy,96.4,92-98,%,Character error rate benchmark on conversational Hindi
+KB-019,Bilingual,Telugu ASR Accuracy,95.1,90-97,%,Word error rate on natural spoken Telugu
+KB-020,Bilingual,Code-Switching BLEU Score,41.8,35-48,score,Bilingual Hindi-English / Telugu-English code-switch score
+KB-021,Bilingual,GTX Translation Latency,65,40-110,ms,Google GTX edge translation bridge latency
+KB-022,Bilingual,Bilingual Translation Fidelity,98.2,95-99.5,%,Semantic intent preservation score post-translation
+KB-023,Architecture,Web Audio Buffer Size,4096,2048-8192,samples,Optimal balance between audio glitches and UI latency
+KB-024,Architecture,AudioContext Clock Drift,0.02,<0.05,ms/min,Drift between system monotonic clock and audio clock
+KB-025,Architecture,Barge-In Interruption Speed,8,2-15,ms,Time required to flush audio queue upon voice detection
+KB-026,Architecture,Concurrent Voice Sessions,120,50-250,streams,Single Node.js microservice worker capacity
+KB-027,Architecture,WebSocket Ping Interval,15000,10000-30000,ms,Heartbeat interval for real-time full-duplex session
+KB-028,Architecture,Client Memory Footprint,42,25-65,MB,Vite React SPA memory consumption during active stream
+KB-029,Architecture,Node Server RAM Usage,68,45-110,MB,Backend memory utilization with active session cache
+KB-030,Architecture,Docker Image Size,185,120-250,MB,Production Alpine container bundle footprint
+KB-031,Performance,Vocal Energy Score Normal,28,15-45,%,Calm baseline vocal amplitude energy
+KB-032,Performance,Vocal Energy Score Animated,58,45-70,%,Active engaged discussion vocal amplitude
+KB-033,Performance,Vocal Energy Score Urgent,88,75-100,%,High-stakes urgent operational coordination
+KB-034,Optimization,API Latency Redis Cache Hit,4,1-8,ms,In-memory cached response turnaround time
+KB-035,Optimization,Connection Pooling Size,20,10-50,connections,Optimal PostgreSQL/backend database pool
+KB-036,Optimization,Gzip Bundle Reduction,68,60-75,%,Asset compression ratio for production JS bundle
+KB-037,Optimization,Edge CDN TTFB,24,15-45,ms,Time to first byte across Cloudflare / GitHub Pages CDN
+KB-038,Quantum,Superposition Qubit State,2^N,exponential,states,Quantum parallelism scaling factor for N physical qubits
+KB-039,Quantum,Entanglement Telemetry Fidelity,99.1,98-99.9,%,Bell state measurement coherence benchmark
+KB-040,Quantum,Coherence Time T2,120,80-250,microseconds,Superconducting transmon qubit operational coherence
+KB-041,ActionBoard,Entity Extraction Precision,94.6,90-98,%,Named entity recognition for locations, metrics, topics
+KB-042,ActionBoard,Intent Classification F1,0.92,0.85-0.96,F1 score,Classification score across 6 conversation intents
+KB-043,ActionBoard,Action Item Extraction Speed,140,80-220,ms,Extraction latency for structured task deliverables
+KB-044,Telemetry,Microphone SNR Drop Warning,10,<12,dB,Triggers ambient noise warning tag in UI
+KB-045,Telemetry,Echo Feedback Prevention Threshold,2500,2000-3500,ms,Speech recognition deduplication and lock window
+KB-046,Telemetry,Dual PCM Oscilloscope Refresh,60,30-120,fps,RequestAnimationFrame render cadence for visualizers
+KB-047,VoiceEngine,SpeechSynthesis Rate Standard,1.05,0.9-1.2,rate,Natural speaking pace for browser synthesis
+KB-048,VoiceEngine,Expressive Voice Models,5,4-10,voices,Kore (Exec), Aoede (Warm), Fenrir (Hindi), Zephyr (Tech)
+KB-049,VoiceEngine,Auto-Hangup Countdown,3,2-5,seconds,Safe disconnect window following action ticket completion
+KB-050,VoiceEngine,Universal Topic Synthesis Limit,6,3-8,words,Maximum word length for synthesized conversation topic

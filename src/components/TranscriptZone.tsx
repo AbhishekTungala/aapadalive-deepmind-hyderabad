@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   Mic,
   Radio,
@@ -10,19 +10,45 @@ import {
   Tag,
   Zap,
   Volume2,
-  Activity
+  Activity,
+  PhoneOff,
+  PhoneCall,
+  VolumeX
 } from 'lucide-react';
 import type { TranscriptEntry, VoiceActionTicket } from '../types';
+
+export const LANGUAGE_OPTIONS: { id: 'auto' | 'te' | 'hi' | 'en'; label: string }[] = [
+  { id: 'auto', label: 'Auto' },
+  { id: 'te', label: 'తెలుగు' },
+  { id: 'hi', label: 'हिंदी' },
+  { id: 'en', label: 'English' }
+];
 
 interface TranscriptZoneProps {
   transcript: TranscriptEntry[];
   ticket?: VoiceActionTicket;
   activeLandmark?: string;
+  isConnected?: boolean;
+  onStopCall?: () => void;
+  onStartLiveMic?: () => void;
+  onStopAudio?: () => void;
+  isVoiceMuted?: boolean;
+  onToggleVoiceMute?: () => void;
+  selectedLanguage?: 'auto' | 'te' | 'hi' | 'en';
+  onSelectLanguage?: (lang: 'auto' | 'te' | 'hi' | 'en') => void;
 }
 
 export const TranscriptZone: React.FC<TranscriptZoneProps> = ({
   transcript,
-  ticket
+  ticket,
+  isConnected = false,
+  onStopCall,
+  onStartLiveMic,
+  onStopAudio,
+  isVoiceMuted = false,
+  onToggleVoiceMute,
+  selectedLanguage = 'auto',
+  onSelectLanguage
 }) => {
   const streamEndRef = useRef<HTMLDivElement>(null);
 
@@ -50,16 +76,87 @@ export const TranscriptZone: React.FC<TranscriptZoneProps> = ({
       {/* TOP 65%: Live Multi-Speaker Voice & Translation Console                   */}
       {/* ========================================================================= */}
       <div className="flex-[65_65_0%] flex flex-col min-h-0 gap-2">
-        <div className="flex items-center justify-between border-b border-[#1e3a5f]/40 pb-2 flex-shrink-0">
+        <div className="flex flex-wrap items-center justify-between border-b border-[#1e3a5f]/40 pb-2 flex-shrink-0 gap-2">
           <div className="flex items-center gap-2">
-            <Mic className="w-4 h-4 text-emerald-400" />
+            <Mic className={`w-4 h-4 ${isConnected ? 'text-emerald-400 animate-pulse' : 'text-slate-400'}`} />
             <h2 className="text-xs font-mono font-bold text-white tracking-wide uppercase">
-              LIVE MULTI-SPEAKER VOICE & TRANSLATION CONSOLE (GEMINI 3.8 LIVE)
+              VOICE & TRANSLATION CONSOLE
             </h2>
           </div>
-          <div className="flex items-center gap-2 text-[10px] font-mono text-cyan-300">
-            <Languages className="w-3.5 h-3.5 text-teal-400" />
-            <span>MIC 16kHz PCM • DUAL-CHANNEL BIDI AUDIO</span>
+
+          {/* Center-Right: Language Selector Pills */}
+          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[#0a131f] border border-[#1e3a5f]/60 font-mono text-[10px]">
+            {LANGUAGE_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => onSelectLanguage?.(opt.id)}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                  selectedLanguage === opt.id
+                    ? 'bg-cyan-500/30 text-cyan-200 border border-cyan-400'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title={`Set voice language mode to ${opt.label}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Right: Always-Visible Controls */}
+          <div className="flex items-center gap-1.5">
+            {/* Permanent Voice Off Toggle */}
+            <button
+              onClick={onToggleVoiceMute}
+              className={`px-2 py-1 rounded text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all border ${
+                isVoiceMuted
+                  ? 'bg-rose-500/25 text-rose-200 border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+              }`}
+              title={isVoiceMuted ? 'Voice is Muted (Click to Unmute)' : 'Voice is ON (Click to Mute)'}
+            >
+              {isVoiceMuted ? (
+                <>
+                  <VolumeX className="w-3 h-3 text-rose-400" />
+                  <span>VOICE: OFF</span>
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-3 h-3 text-emerald-400" />
+                  <span>VOICE: ON</span>
+                </>
+              )}
+            </button>
+
+            {/* Permanent Stop Speech */}
+            <button
+              onClick={onStopAudio}
+              className="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all shadow-sm"
+              title="Silence whatever AI is currently saying"
+            >
+              <VolumeX className="w-3 h-3 text-amber-400" />
+              <span>STOP</span>
+            </button>
+
+            {/* Permanent Start / End Call */}
+            {isConnected ? (
+              <button
+                onClick={onStopCall}
+                className="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all shadow-sm animate-pulse"
+                title="End active voice session"
+              >
+                <PhoneOff className="w-3 h-3 text-rose-400" />
+                <span>END CALL</span>
+              </button>
+            ) : (
+              <button
+                onClick={onStartLiveMic}
+                className="px-2.5 py-1 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all shadow-sm"
+                title="Start live voice session"
+              >
+                <PhoneCall className="w-3 h-3 text-cyan-400" />
+                <span>START CALL</span>
+              </button>
+            )}
           </div>
         </div>
 

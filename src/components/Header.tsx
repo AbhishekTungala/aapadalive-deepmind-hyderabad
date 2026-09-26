@@ -4,12 +4,19 @@ import {
   PhoneOff,
   AlertTriangle,
   Key,
-  ShieldCheck,
-  Radio,
-  Mic,
-  Lock
+  Lock,
+  Volume2,
+  VolumeX,
+  Languages
 } from 'lucide-react';
 import type { SystemTelemetry } from '../types';
+
+export const LANGUAGE_OPTIONS: { id: 'auto' | 'te' | 'hi' | 'en'; label: string }[] = [
+  { id: 'auto', label: 'Auto (Bilingual)' },
+  { id: 'te', label: 'తెలుగు (Telugu)' },
+  { id: 'hi', label: 'हिंदी (Hindi)' },
+  { id: 'en', label: 'English' }
+];
 
 interface HeaderProps {
   telemetry: SystemTelemetry;
@@ -18,6 +25,11 @@ interface HeaderProps {
   onStartLiveMic: () => void;
   onStopCall: () => void;
   onStartNewCall?: () => void;
+  onStopAudio?: () => void;
+  isVoiceMuted?: boolean;
+  onToggleVoiceMute?: () => void;
+  selectedLanguage?: 'auto' | 'te' | 'hi' | 'en';
+  onSelectLanguage?: (lang: 'auto' | 'te' | 'hi' | 'en') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,7 +38,11 @@ export const Header: React.FC<HeaderProps> = ({
   onSetApiKey,
   onStartLiveMic,
   onStopCall,
-  onStartNewCall,
+  onStopAudio,
+  isVoiceMuted = false,
+  onToggleVoiceMute,
+  selectedLanguage = 'auto',
+  onSelectLanguage
 }) => {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [tempKey, setTempKey] = useState(apiKey);
@@ -56,7 +72,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isConnected = telemetry.connectionStatus === 'CONNECTED';
   const isConnecting = telemetry.connectionStatus === 'CONNECTING';
-  const isFinalized = telemetry.callState === 'FINALIZED';
 
   // Format call duration into MM:SS
   const formatDuration = (totalSeconds: number = 0) => {
@@ -66,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="relative z-30 border-b border-[#1e3a5f]/60 bg-[#0a131f]/95 backdrop-blur-2xl px-4 lg:px-6 py-2.5 shadow-[0_4px_24px_rgba(0,0,0,0.6)]">
+    <header className="relative z-30 border-b border-[#1e3a5f]/60 bg-[#0a131f]/95 backdrop-blur-2xl px-3 lg:px-5 py-2.5 shadow-[0_4px_24px_rgba(0,0,0,0.6)]">
       {/* Auto Hang-Off Countdown Banner */}
       {telemetry.autoHangUpCountdown !== null && telemetry.autoHangUpCountdown !== undefined && (
         <div className="absolute top-full left-0 right-0 z-50 bg-gradient-to-r from-cyan-600/30 via-teal-600/40 to-cyan-600/30 border-b-2 border-cyan-500 text-cyan-200 px-6 py-2.5 flex items-center justify-between shadow-2xl backdrop-blur-xl animate-pulse">
@@ -111,9 +126,9 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
-      <div className="max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div className="max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-3">
         {/* Left: macOS-Style Command Header Title & Window Controls */}
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-3">
           {/* macOS window control dots */}
           <div className="flex items-center gap-1.5 mr-1">
             <span className="w-3 h-3 rounded-full bg-[#ef4444] border border-[#dc2626]/60 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
@@ -132,78 +147,105 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </h1>
             <p className="text-[10px] md:text-[11px] text-cyan-300/80 font-mono tracking-wider uppercase mt-0.5">
-              GEMINI 3.8 LIVE • MID-SENTENCE BARGE-IN • VOCAL PROSODY • LIVE TRANSLATE • STRUCTURED VOICE ACTION
+              GEMINI 3.8 LIVE • TELUGU / HINDI / ENGLISH MULTILINGUAL • REAL-TIME CSV DATASET
             </p>
           </div>
         </div>
 
-        {/* Right: Reference Dashboard Status Pills & Start/End Live Call CTA */}
-        <div className="flex items-center gap-2.5">
-          {/* Gemini 3.8 Live Ready Status Pill */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111e2e] border border-[#1e3a5f] text-xs font-mono">
-            <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse shadow-[0_0_8px_#10b981]" />
-            <span className="text-emerald-300 font-bold">Gemini 3.8 Live: Ready</span>
-          </div>
+        {/* Center: Live Language Mode Selector Pill Bar */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#111e2e] border border-[#1e3a5f] shadow-inner">
+          <span className="text-[10px] font-mono text-slate-400 px-1.5 flex items-center gap-1 hidden md:flex">
+            <Languages className="w-3 h-3 text-cyan-400" />
+            <span>LANG:</span>
+          </span>
+          {LANGUAGE_OPTIONS.map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => onSelectLanguage?.(opt.id)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                selectedLanguage === opt.id
+                  ? 'bg-cyan-500/25 text-cyan-200 border border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
 
-          {/* Full-Duplex Bidi Audio Pill */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111e2e] border border-[#1e3a5f] text-xs font-mono text-cyan-300">
-            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="font-bold text-cyan-300">Full-Duplex Bidi Audio</span>
-          </div>
-
-          {/* Mic 16kHz Active Pill */}
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111e2e] border border-[#1e3a5f] text-xs font-mono">
-            <Mic className={`w-3.5 h-3.5 ${isConnected ? 'text-cyan-400 animate-pulse' : 'text-slate-400'}`} />
-            <span className="text-slate-400">Mic:</span>
-            <span className={`font-bold ${isConnected ? 'text-cyan-300' : 'text-slate-300'}`}>
-              {isConnected ? '16kHz Live' : '16kHz Standby'}
-            </span>
-          </div>
-
-          {/* Ops Clock */}
-          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111e2e] border border-[#1e3a5f] text-xs font-mono text-slate-300">
-            <Radio className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-cyan-300 font-bold">{missionTime || '14:20:00 IST'}</span>
-          </div>
-
-          {/* API Key Modal Button */}
+        {/* Right: Always-Visible Controls (Voice Off, Stop Speech, Call Toggle) */}
+        <div className="flex items-center gap-2">
+          {/* Permanent High-Visibility "VOICE OFF / MUTE AI" Toggle Button */}
           <button
-            onClick={() => setShowKeyModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111e2e] hover:bg-[#1a2c42] border border-[#1e3a5f] text-slate-300 text-xs font-mono transition-all cursor-pointer shadow-sm"
-            title="Configure Gemini API Key (sessionStorage only)"
+            onClick={onToggleVoiceMute}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-mono font-bold text-xs tracking-wider transition-all cursor-pointer shadow-sm border active:scale-95 ${
+              isVoiceMuted
+                ? 'bg-rose-500/25 hover:bg-rose-500/35 text-rose-200 border-rose-500 shadow-[0_0_16px_rgba(244,63,94,0.35)] animate-pulse'
+                : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/50'
+            }`}
+            title={isVoiceMuted ? 'AI Voice Output is Muted (Click to Unmute)' : 'AI Voice Output is Active (Click to Mute)'}
           >
-            <Key className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">API Key</span>
-            {apiKey && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+            {isVoiceMuted ? (
+              <>
+                <VolumeX className="w-4 h-4 text-rose-400" />
+                <span>🔇 AI VOICE: OFF (MUTED)</span>
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-4 h-4 text-emerald-400" />
+                <span>🔊 AI VOICE: ON</span>
+              </>
+            )}
           </button>
 
-          {/* Start / End Live Voice Session Button */}
+          {/* Always-Visible "STOP CURRENT SPEECH" Button */}
+          <button
+            onClick={onStopAudio}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-mono font-bold text-xs tracking-wider cursor-pointer active:scale-95 transition-all shadow-sm"
+            title="Immediately silence whatever the AI voice is saying right now"
+          >
+            <VolumeX className="w-4 h-4 text-amber-400" />
+            <span>STOP SPEECH</span>
+          </button>
+
+          {/* Always-Visible "START / END VOICE SESSION" Toggle Button */}
           {isConnected ? (
             <button
               onClick={onStopCall}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-mono font-bold text-xs tracking-wider shadow-[0_0_20px_rgba(225,29,72,0.45)] border border-rose-400/50 cursor-pointer active:scale-95 transition-all animate-pulse"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-mono font-bold text-xs tracking-wider shadow-[0_0_20px_rgba(225,29,72,0.45)] border border-rose-400/50 cursor-pointer active:scale-95 transition-all animate-pulse"
+              title="End current voice session"
             >
               <PhoneOff className="w-4 h-4 text-white" />
               <span>END VOICE SESSION ({formatDuration(telemetry.callDurationSeconds || 0)})</span>
-            </button>
-          ) : isFinalized ? (
-            <button
-              onClick={onStartNewCall || onStartLiveMic}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-mono font-bold text-xs tracking-wider shadow-[0_0_20px_rgba(16,185,129,0.35)] cursor-pointer active:scale-95 transition-all"
-            >
-              <PhoneCall className="w-4 h-4 text-slate-950" />
-              <span>START NEW VOICE SESSION</span>
             </button>
           ) : (
             <button
               onClick={onStartLiveMic}
               disabled={isConnecting}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-mono font-bold text-xs tracking-wider shadow-[0_0_25px_rgba(6,182,212,0.4)] cursor-pointer active:scale-95 transition-all"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-mono font-bold text-xs tracking-wider shadow-[0_0_25px_rgba(6,182,212,0.4)] cursor-pointer active:scale-95 transition-all"
             >
               <PhoneCall className="w-4 h-4 text-slate-950" />
-              <span>{isConnecting ? 'CONNECTING MIC...' : 'START LIVE VOICE SESSION'}</span>
+              <span>{isConnecting ? 'CONNECTING MIC...' : 'START VOICE SESSION'}</span>
             </button>
           )}
+
+          {/* Ops Clock */}
+          {missionTime && (
+            <div className="hidden lg:flex items-center px-2.5 py-2 rounded-xl bg-[#111e2e] border border-[#1e3a5f] text-slate-400 text-xs font-mono">
+              <span className="text-cyan-300 font-bold">{missionTime}</span>
+            </div>
+          )}
+
+          {/* API Key Modal Button */}
+          <button
+            onClick={() => setShowKeyModal(true)}
+            className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-[#111e2e] hover:bg-[#1a2c42] border border-[#1e3a5f] text-slate-300 text-xs font-mono transition-all cursor-pointer shadow-sm"
+            title="Configure Gemini API Key"
+          >
+            <Key className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">API</span>
+            {apiKey && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+          </button>
         </div>
       </div>
 

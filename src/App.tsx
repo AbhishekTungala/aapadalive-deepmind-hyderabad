@@ -376,8 +376,29 @@ export function App() {
         category: 'ACTION_SUMMARY'
       });
     }
-
     setAutoHangUpCountdown(3);
+  };
+
+  const [isVoiceMuted, setIsVoiceMuted] = useState<boolean>(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<'auto' | 'te' | 'hi' | 'en'>('auto');
+
+  const handleToggleVoiceMute = () => {
+    setIsVoiceMuted((prev) => {
+      const next = !prev;
+      audioStackRef.current?.setVoiceMuted(next);
+      return next;
+    });
+  };
+
+  const handleSelectLanguage = (lang: 'auto' | 'te' | 'hi' | 'en') => {
+    setSelectedLanguage(lang);
+    audioStackRef.current?.setLanguage(lang);
+  };
+
+  const handleStopAudio = () => {
+    if (audioStackRef.current) {
+      audioStackRef.current.stopAllAudioPlayback();
+    }
   };
 
   const currentSeverity = ticket.severity;
@@ -392,6 +413,11 @@ export function App() {
         onStartLiveMic={handleStartLiveMic}
         onStopCall={handleStopCall}
         onStartNewCall={handleStartNewCall}
+        onStopAudio={handleStopAudio}
+        isVoiceMuted={isVoiceMuted}
+        onToggleVoiceMute={handleToggleVoiceMute}
+        selectedLanguage={selectedLanguage}
+        onSelectLanguage={handleSelectLanguage}
       />
 
       {/* Main 3-Column Bento Grid */}
@@ -412,6 +438,14 @@ export function App() {
           <TranscriptZone
             transcript={transcripts}
             ticket={ticket}
+            isConnected={telemetry.connectionStatus === 'CONNECTED'}
+            onStopCall={handleStopCall}
+            onStartLiveMic={handleStartLiveMic}
+            onStopAudio={handleStopAudio}
+            isVoiceMuted={isVoiceMuted}
+            onToggleVoiceMute={handleToggleVoiceMute}
+            selectedLanguage={selectedLanguage}
+            onSelectLanguage={handleSelectLanguage}
           />
         </section>
 
