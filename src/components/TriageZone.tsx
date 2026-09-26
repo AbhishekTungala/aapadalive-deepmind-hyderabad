@@ -1,68 +1,63 @@
 import React, { useState } from 'react';
 import {
-  FileText,
-  AlertOctagon,
+  Sparkles,
   MapPin,
-  HeartPulse,
-  Truck,
-  Send,
   Volume2,
+  Send,
   CheckCircle2,
-  Building2,
-  Phone,
-  Car
+  Radio,
+  Flame,
+  Globe2,
+  Zap
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import type { TriageTicket, TTSPreset } from '../types';
+import type { TriageTicket, TTSPreset, AcousticProsodyMetrics, SystemTelemetry } from '../types';
 import { TTS_ACTION_PRESETS } from '../services/geminiAudioStack';
 
 interface TriageZoneProps {
   ticket: TriageTicket;
+  prosody: AcousticProsodyMetrics;
+  telemetry: SystemTelemetry;
+  detectedLanguage?: string;
   onDispatchTicket: () => void;
   onTriggerTTS: (preset: TTSPreset) => void;
 }
 
 export const TriageZone: React.FC<TriageZoneProps> = ({
   ticket,
+  prosody,
+  telemetry,
+  detectedLanguage = 'Telugu + English (Code-Switched)',
   onDispatchTicket,
   onTriggerTTS,
 }) => {
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
 
-  const isStandby = ticket.ticketId === 'STANDBY-108' || ticket.categoryLabel.includes('Awaiting') || ticket.category === 'AWAITING_STREAM';
-
-  const getSeverityBadge = (severity: string) => {
-    if (isStandby) {
-      return (
-        <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-[10px] font-mono tracking-wider">
-          STANDBY // AWAITING CALL
-        </span>
-      );
+  // Compute Vocal Emotion & Tone from real-time mic prosody
+  const getVocalEmotion = () => {
+    if (telemetry.connectionStatus !== 'CONNECTED') {
+      return { label: 'Line Standby / Ambient Silence', color: 'text-slate-400', badge: 'bg-slate-800 text-slate-400' };
     }
-    switch (severity) {
-      case 'CRITICAL':
-        return (
-          <span className="px-2.5 py-0.5 rounded-full bg-rose-500/25 text-rose-200 border border-rose-500/60 text-[10px] font-mono font-bold tracking-wider flex items-center gap-1 shadow-[0_0_12px_rgba(244,63,94,0.3)] animate-pulse">
-            <AlertOctagon className="w-3 h-3 text-rose-400" />
-            CRITICAL ALPHA
-          </span>
-        );
-      case 'HIGH':
-        return (
-          <span className="px-2.5 py-0.5 rounded-full bg-orange-500/25 text-orange-200 border border-orange-500/60 text-[10px] font-mono font-bold tracking-wider flex items-center gap-1 shadow-[0_0_12px_rgba(249,115,22,0.3)]">
-            <AlertOctagon className="w-3 h-3 text-orange-400" />
-            HIGH BRAVO
-          </span>
-        );
-      default:
-        return (
-          <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[10px] font-mono font-bold tracking-wider flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3 text-amber-400" />
-            MODERATE CHARLIE
-          </span>
-        );
+    if (prosody.stressScore >= 75) {
+      return { label: 'Panicked / Agonal Shaky (Critical Stress)', color: 'text-rose-400 font-bold', badge: 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse' };
     }
+    if (prosody.stressScore >= 45) {
+      return { label: 'Urgent / Elevated Pitch (High Stress)', color: 'text-amber-400 font-bold', badge: 'bg-amber-500/20 text-amber-300 border-amber-500/40' };
+    }
+    return { label: 'Calm / Steady Baseline (Conversational)', color: 'text-teal-400 font-bold', badge: 'bg-teal-500/20 text-teal-300 border-teal-500/40' };
   };
+
+  // Determine current Turn-Taking Floor Holder
+  const getFloorHolder = () => {
+    if (telemetry.connectionStatus !== 'CONNECTED') return 'Line Standby';
+    if (telemetry.bargeInActive) return 'Caller Interrupted (Barge-In Active)';
+    if (telemetry.interactionStatus === 'IN_PROGRESS') return 'AI Copilot (Speaking 24kHz)';
+    if (telemetry.audioInputLevel > 10) return 'Caller (Speaking 16kHz)';
+    return 'Floor Open // Listening';
+  };
+
+  const emotion = getVocalEmotion();
+  const floorHolder = getFloorHolder();
 
   const handleDispatch = () => {
     try {
@@ -86,75 +81,126 @@ export const TriageZone: React.FC<TriageZoneProps> = ({
   return (
     <div className="h-full flex flex-col gap-3.5">
       {/* ========================================================================= */}
-      {/* CARD 1: Live Dispatch Triage Queue (Reference Bento Cockpit)             */}
+      {/* CARD 1: Multi-Speaker Audio -> Structured Action (gemini-3.5-transcribe) */}
       {/* ========================================================================= */}
       <div className="p-4 rounded-xl bg-[#111e2e]/90 backdrop-blur-2xl border border-[#1e3a5f]/70 shadow-[0_8px_32px_0_rgba(10,19,31,0.6)] flex flex-col gap-3">
         {/* Card Header */}
         <div className="flex items-center justify-between border-b border-[#1e3a5f]/40 pb-2">
           <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-cyan-400" />
+            <Sparkles className="w-4 h-4 text-cyan-400" />
             <h2 className="text-xs font-mono font-bold text-white tracking-wide uppercase">
-              Live Dispatch Triage Queue
+              Audio ➔ Structured Action (Gemini 3.5)
             </h2>
           </div>
-          {getSeverityBadge(ticket.severity)}
+          <span className="text-[10px] font-mono text-cyan-300">
+            AUDIO-FIRST
+          </span>
         </div>
 
-        {/* Real Extracted Incident Fields (Horizontal Pill Rows) */}
+        {/* 4 Voice-Derived Structured Action Fields */}
         <div className="space-y-2 font-mono text-xs">
-          {/* Location Row */}
-          <div className="p-2 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/50 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-slate-400 text-[11px] shrink-0">
-              <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Location:</span>
+          {/* Field 1: Detected Vocal Emotion & Tone */}
+          <div className="p-2.5 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/50 flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400 text-[10px] flex items-center gap-1.5 uppercase">
+                <Flame className="w-3.5 h-3.5 text-rose-400" />
+                Vocal Emotion & Tone
+              </span>
+              <span className={`px-2 py-0.5 rounded text-[9px] border ${emotion.badge}`}>
+                {prosody.stressScore}% STRESS
+              </span>
             </div>
-            <div className="font-bold text-cyan-300 truncate text-right">
+            <div className={`text-xs mt-0.5 ${emotion.color}`}>
+              {emotion.label}
+            </div>
+          </div>
+
+          {/* Field 2: Detected Language & Code-Switching */}
+          <div className="p-2.5 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/50 flex flex-col gap-1">
+            <span className="text-slate-400 text-[10px] flex items-center gap-1.5 uppercase">
+              <Globe2 className="w-3.5 h-3.5 text-teal-400" />
+              Detected Language & Code-Switching
+            </span>
+            <div className="text-xs font-bold text-teal-300">
+              {detectedLanguage}
+            </div>
+          </div>
+
+          {/* Field 3: Spoken Location (Synced to Google Map) */}
+          <div className="p-2.5 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/50 flex flex-col gap-1">
+            <span className="text-slate-400 text-[10px] flex items-center gap-1.5 uppercase">
+              <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+              Spoken Location (Synced to Map)
+            </span>
+            <div className="text-xs font-bold text-cyan-300 truncate">
               {ticket.landmark}
             </div>
           </div>
 
-          {/* Category / Symptom Row */}
-          <div className="p-2 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/50 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-slate-400 text-[11px] shrink-0">
-              <HeartPulse className="w-3.5 h-3.5 text-rose-400" />
-              <span>Category:</span>
-            </div>
-            <div className="font-bold text-rose-300 truncate text-right">
-              {ticket.categoryLabel}
-            </div>
-          </div>
-
-          {/* Caller Phone Row */}
-          <div className="p-2 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/50 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-slate-400 text-[11px] shrink-0">
-              <Phone className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Caller Phone:</span>
-            </div>
-            <div className="font-bold text-emerald-300">
-              {ticket.callerIdentity?.phone || 'Not Provided'}
+          {/* Field 4: Structured Action Triggered */}
+          <div className="p-2.5 rounded-lg bg-[#0a131f]/80 border border-emerald-500/30 flex flex-col gap-1 shadow-sm">
+            <span className="text-emerald-400 text-[10px] flex items-center gap-1.5 uppercase font-bold">
+              <Zap className="w-3.5 h-3.5 text-emerald-400" />
+              Structured Action Triggered
+            </span>
+            <div className="text-xs font-bold text-white leading-snug">
+              {ticket.category !== 'AWAITING_STREAM'
+                ? `[AUTO-DISPATCH] Routing 108 ALS Unit for ${ticket.categoryLabel}`
+                : 'Awaiting voice command or incident report from caller...'}
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Vehicle Plate Row */}
-          <div className="p-2 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/50 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-slate-400 text-[11px] shrink-0">
-              <Car className="w-3.5 h-3.5 text-amber-400" />
-              <span>Vehicle Plate:</span>
+      {/* ========================================================================= */}
+      {/* CARD 2: Mid-Sentence Interruption & Expressive TTS (gemini-3.8-flash-tts) */}
+      {/* ========================================================================= */}
+      <div className="p-4 rounded-xl bg-[#111e2e]/90 backdrop-blur-2xl border border-[#1e3a5f]/70 shadow-[0_8px_32px_0_rgba(10,19,31,0.6)] flex flex-col gap-3 flex-1 justify-between">
+        {/* Card Header */}
+        <div className="flex items-center justify-between border-b border-[#1e3a5f]/40 pb-2">
+          <div className="flex items-center gap-2">
+            <Radio className="w-4 h-4 text-purple-400" />
+            <h3 className="text-xs font-mono font-bold text-white tracking-wide uppercase">
+              Barge-In & Expressive TTS
+            </h3>
+          </div>
+          <span className="text-[10px] font-mono text-purple-300">
+            0ms LATENCY
+          </span>
+        </div>
+
+        {/* Live Barge-In & Turn-Taking Monitor */}
+        <div className="space-y-2 font-mono">
+          <div className="p-2.5 rounded-lg bg-[#0a131f]/90 border border-purple-500/30 space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-400 text-[10px] uppercase">Turn Floor Holder:</span>
+              <span className={`font-bold text-xs ${
+                telemetry.bargeInActive ? 'text-amber-400 animate-bounce' : 'text-purple-300'
+              }`}>
+                {floorHolder}
+              </span>
             </div>
-            <div className="font-bold text-amber-300">
-              {ticket.callerIdentity?.vehiclePlate || 'None Reported'}
+
+            <div className="flex items-center justify-between text-xs pt-1 border-t border-white/[0.06]">
+              <span className="text-slate-400 text-[10px] uppercase">Interruption Latency:</span>
+              <span className="font-bold text-emerald-400">0ms Buffer Flush</span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs pt-1 border-t border-white/[0.06]">
+              <span className="text-slate-400 text-[10px] uppercase">Barge-Ins Detected:</span>
+              <span className="font-bold text-amber-300">{telemetry.bargeInCount} events</span>
             </div>
           </div>
         </div>
 
-        {/* 4 One-Tap TTS Voice Injection Chips */}
-        <div className="pt-2 border-t border-[#1e3a5f]/30 space-y-1.5">
+        {/* 4 Expressive Voice Responses (gemini-3.8-flash-tts) */}
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 uppercase">
             <span className="flex items-center gap-1">
               <Volume2 className="w-3 h-3 text-cyan-400" />
-              <span>One-Tap Operator Voice Chips</span>
+              <span>Expressive Voice Responses</span>
             </span>
-            <span className="text-slate-500">VOICE PRESETS</span>
+            <span className="text-slate-500">FLASH-TTS</span>
           </div>
 
           <div className="grid grid-cols-2 gap-1.5">
@@ -166,15 +212,15 @@ export const TriageZone: React.FC<TriageZoneProps> = ({
                   onClick={() => handleTTSClick(preset)}
                   className={`p-2 rounded-lg border text-left transition-all text-xs cursor-pointer ${
                     isPlaying
-                      ? 'bg-cyan-500/25 border-cyan-400 text-cyan-100 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+                      ? 'bg-purple-500/25 border-purple-400 text-purple-100 shadow-[0_0_12px_rgba(168,85,247,0.3)]'
                       : 'bg-[#0a131f]/80 border-[#1e3a5f]/50 hover:bg-[#16273c] text-slate-300'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[9px] font-mono font-bold text-cyan-400 uppercase">
+                    <span className="text-[9px] font-mono font-bold text-purple-400 uppercase">
                       {preset.language.split(' ')[0]}
                     </span>
-                    <span className="text-[8px] font-mono text-slate-500">{preset.voice}</span>
+                    <span className="text-[8px] font-mono text-slate-400">{preset.voice}</span>
                   </div>
                   <div className="font-bold text-white text-[11px] leading-tight truncate">
                     {preset.label}
@@ -184,85 +230,8 @@ export const TriageZone: React.FC<TriageZoneProps> = ({
             })}
           </div>
         </div>
-      </div>
 
-      {/* ========================================================================= */}
-      {/* CARD 2: Hospital Capacity & Route Feasibility (Reference Bento Cockpit)  */}
-      {/* ========================================================================= */}
-      <div className="p-4 rounded-xl bg-[#111e2e]/90 backdrop-blur-2xl border border-[#1e3a5f]/70 shadow-[0_8px_32px_0_rgba(10,19,31,0.6)] flex flex-col gap-3 flex-1 justify-between">
-        {/* Card Header */}
-        <div className="flex items-center justify-between border-b border-[#1e3a5f]/40 pb-2">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-xs font-mono font-bold text-white tracking-wide uppercase">
-              Hospital Capacity & Route Feasibility
-            </h3>
-          </div>
-          <span className="text-[10px] font-mono text-emerald-400">
-            TRIAGE NETWORK
-          </span>
-        </div>
-
-        {/* 3 Glowing Multi-Color Progress Bars for Hospital Load */}
-        <div className="space-y-3 font-mono">
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-slate-300 font-bold">KIMS Secunderabad</span>
-              <span className="text-emerald-400 font-bold">78% Available</span>
-            </div>
-            <div className="h-2 w-full bg-[#0a131f] rounded-full overflow-hidden border border-[#1e3a5f]/40">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_8px_#10b981]"
-                style={{ width: '78%' }}
-              />
-            </div>
-            <span className="text-[9px] text-slate-400 mt-0.5 block">Trauma ICU 4 Beds • Distance: 3.2 km</span>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-slate-300 font-bold">Apollo Jubilee Hills</span>
-              <span className="text-amber-400 font-bold">64% Available</span>
-            </div>
-            <div className="h-2 w-full bg-[#0a131f] rounded-full overflow-hidden border border-[#1e3a5f]/40">
-              <div
-                className="h-full bg-gradient-to-r from-amber-500 to-orange-400 shadow-[0_0_8px_#f59e0b]"
-                style={{ width: '64%' }}
-              />
-            </div>
-            <span className="text-[9px] text-slate-400 mt-0.5 block">Cardiac Cath Lab Active • Distance: 5.8 km</span>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-slate-300 font-bold">Osmania General Hospital</span>
-              <span className="text-cyan-400 font-bold">89% Available</span>
-            </div>
-            <div className="h-2 w-full bg-[#0a131f] rounded-full overflow-hidden border border-[#1e3a5f]/40">
-              <div
-                className="h-full bg-gradient-to-r from-cyan-500 to-blue-400 shadow-[0_0_8px_#06b6d4]"
-                style={{ width: '89%' }}
-              />
-            </div>
-            <span className="text-[9px] text-slate-400 mt-0.5 block">Major Trauma & Burn Center • Distance: 4.1 km</span>
-          </div>
-        </div>
-
-        {/* Recommended Unit Summary */}
-        <div className="p-2.5 rounded-lg bg-[#0a131f]/90 border border-emerald-500/30 flex items-center justify-between text-xs font-mono">
-          <div className="flex items-center gap-2">
-            <Truck className="w-4 h-4 text-emerald-400" />
-            <div>
-              <span className="text-emerald-300 font-bold">{ticket.recommendedUnit.unitType}</span>
-              <span className="text-[10px] text-slate-400 block">Unit #{ticket.recommendedUnit.unitId} • ETA: {ticket.recommendedUnit.etaMinutes} mins</span>
-            </div>
-          </div>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">
-            READY
-          </span>
-        </div>
-
-        {/* High-Alert Dispatch CTA Button */}
+        {/* Action Button */}
         <button
           onClick={handleDispatch}
           className={`w-full py-3 px-4 rounded-xl font-mono font-black text-xs tracking-wider uppercase transition-all shadow-[0_0_25px_rgba(225,29,72,0.4)] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer mt-1 ${

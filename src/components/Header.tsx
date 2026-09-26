@@ -123,14 +123,16 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div>
             <h1 className="text-sm md:text-base font-black tracking-tight text-white flex items-center gap-2 font-mono">
-              <span>Emergency Response Coordination</span>
-              <span className="text-[#10b981] font-sans font-bold">—</span>
-              <span className="bg-gradient-to-r from-cyan-400 to-teal-400 bg-clip-text text-transparent">
-                AapadaLive 108
+              <span className="bg-gradient-to-r from-rose-400 via-amber-300 to-cyan-400 bg-clip-text text-transparent">
+                AapadaLive
+              </span>
+              <span className="text-slate-400 font-sans font-bold">—</span>
+              <span className="text-white">
+                Next-Gen Voice & Real-Time Audio Copilot
               </span>
             </h1>
-            <p className="text-[10px] md:text-[11px] text-slate-400 font-mono tracking-wider uppercase mt-0.5">
-              CITY INCIDENT MAP • LIVE VOICE TRIAGE • HOSPITAL LOAD • MULTI-AGENCY OPERATIONS
+            <p className="text-[10px] md:text-[11px] text-cyan-300/80 font-mono tracking-wider uppercase mt-0.5">
+              MID-SENTENCE BARGE-IN • VOCAL TONE PROSODY • REAL-TIME TRANSLATION • STRUCTURED VOICE ACTION
             </p>
           </div>
         </div>

@@ -401,6 +401,8 @@ export function App() {
         <section className="lg:col-span-3 h-full overflow-hidden">
           <TriageZone
             ticket={ticket}
+            prosody={prosody}
+            telemetry={telemetry}
             onDispatchTicket={handleDispatchTicket}
             onTriggerTTS={handleTriggerTTS}
           />

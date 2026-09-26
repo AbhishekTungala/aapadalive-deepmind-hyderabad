@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
-  Radio,
   Mic,
-  Crosshair
+  MapPin,
+  Radio,
+  ExternalLink
 } from 'lucide-react';
 import type { TranscriptEntry } from '../types';
 
@@ -11,64 +12,10 @@ interface TranscriptZoneProps {
   activeLandmark?: string;
 }
 
-interface MapZone {
-  id: string;
-  name: string;
-  points: string;
-  center: [number, number];
-  color: string;
-}
-
-const HYDERABAD_ZONES: MapZone[] = [
-  {
-    id: 'SECUNDERABAD',
-    name: 'Secunderabad',
-    points: '380,40 470,50 490,110 430,130 370,90',
-    center: [430, 80],
-    color: '#06b6d4'
-  },
-  {
-    id: 'BEGUMPET',
-    name: 'Begumpet',
-    points: '260,60 360,70 380,120 310,140 250,110',
-    center: [310, 100],
-    color: '#2dd4bf'
-  },
-  {
-    id: 'BANJARA_HILLS',
-    name: 'Banjara Hills',
-    points: '230,130 330,130 340,190 260,200 210,160',
-    center: [270, 160],
-    color: '#10b981'
-  },
-  {
-    id: 'HITEC_CITY',
-    name: 'Hitec City',
-    points: '120,110 210,120 220,180 150,190 100,150',
-    center: [160, 150],
-    color: '#38bdf8'
-  },
-  {
-    id: 'GACHIBOWLI',
-    name: 'Gachibowli',
-    points: '70,180 160,180 170,250 100,260 50,220',
-    center: [110, 220],
-    color: '#06b6d4'
-  },
-  {
-    id: 'CHARMINAR',
-    name: 'Charminar',
-    points: '290,190 390,200 410,270 330,280 270,240',
-    center: [340, 240],
-    color: '#f59e0b'
-  }
-];
-
 export const TranscriptZone: React.FC<TranscriptZoneProps> = ({
   transcript,
   activeLandmark = ''
 }) => {
-  const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const streamEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll stream as real words are spoken
@@ -76,135 +23,58 @@ export const TranscriptZone: React.FC<TranscriptZoneProps> = ({
     streamEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcript]);
 
-  // Determine which zone to highlight based on real spoken landmark
-  const currentHighlightedZone = React.useMemo(() => {
-    if (selectedZone) return selectedZone;
-    if (!activeLandmark || activeLandmark.includes('Awaiting')) return null;
+  const hasSpokenLocation = Boolean(
+    activeLandmark &&
+    !activeLandmark.includes('Awaiting') &&
+    activeLandmark.trim().length > 0
+  );
 
-    const lower = activeLandmark.toLowerCase();
-    for (const zone of HYDERABAD_ZONES) {
-      if (lower.includes(zone.name.toLowerCase()) || lower.includes(zone.id.toLowerCase())) {
-        return zone.id;
-      }
-    }
-    return null;
-  }, [activeLandmark, selectedZone]);
+  const activeLocation = hasSpokenLocation
+    ? `${activeLandmark}, Hyderabad, Telangana`
+    : 'Hyderabad, Telangana';
 
   return (
     <div className="h-full flex flex-col gap-3.5 p-4 rounded-xl bg-[#111e2e]/90 backdrop-blur-2xl border border-[#1e3a5f]/70 shadow-[0_8px_32px_0_rgba(10,19,31,0.6)]">
       {/* ========================================================================= */}
-      {/* TOP HALF: Dark Vector Tactical Map of Hyderabad (Interactive SVG Grid)   */}
+      {/* TOP HALF: Real Interactive Google Map (Problem Statement 2 Audio Sync)   */}
       {/* ========================================================================= */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between border-b border-[#1e3a5f]/40 pb-2">
           <div className="flex items-center gap-2">
-            <Crosshair className="w-4 h-4 text-cyan-400" />
+            <MapPin className="w-4 h-4 text-cyan-400" />
             <h2 className="text-xs font-mono font-bold text-white tracking-wide uppercase">
-              Interactive Hyderabad City Operations Map
+              Real Interactive Incident Map (Google Maps Engine)
             </h2>
           </div>
-          <div className="flex items-center gap-3 text-[10px] font-mono text-slate-400">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_6px_#22d3ee]" />
-              <span>ORR / RADIAL CORRIDORS</span>
-            </span>
-            <span className="text-slate-500">17°23'N 78°28'E</span>
+          <div className="flex items-center gap-2 text-[10px] font-mono text-cyan-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]" />
+            <span>AUDIO-SYNCED GEO-TRIANGULATION</span>
           </div>
         </div>
 
-        {/* SVG Tactical Map Canvas */}
+        {/* Real Embedded Google Map with Dark Mode Filter */}
         <div className="relative h-64 w-full rounded-xl bg-[#080f1a] border border-[#1e3a5f]/60 overflow-hidden shadow-inner flex items-center justify-center">
-          <svg
-            viewBox="0 0 540 310"
-            className="w-full h-full object-cover select-none"
-          >
-            <defs>
-              {/* Tactical map background grid pattern */}
-              <pattern id="tacticalGrid" width="30" height="30" patternUnits="userSpaceOnUse">
-                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1e3a5f" strokeWidth="0.5" strokeOpacity="0.4" />
-                <circle cx="0" cy="0" r="1" fill="#06b6d4" fillOpacity="0.4" />
-              </pattern>
+          <iframe
+            key={activeLocation}
+            title="Real Interactive Google Map - Spoken Incident Location"
+            src={`https://maps.google.com/maps?q=${encodeURIComponent(activeLocation)}&t=m&z=14&output=embed`}
+            className="w-full h-full border-0 invert-[90%] hue-rotate-180 contrast-105 opacity-90"
+            loading="lazy"
+          />
 
-              {/* Radial gradient for highlighted beacon */}
-              <radialGradient id="beaconGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.8" />
-                <stop offset="50%" stopColor="#06b6d4" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
-              </radialGradient>
-            </defs>
-
-            {/* Grid Backdrop */}
-            <rect width="100%" height="100%" fill="url(#tacticalGrid)" />
-
-            {/* Interconnected Cyan Emergency Route Corridors */}
-            <g stroke="#06b6d4" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.6">
-              <line x1="110" y1="220" x2="160" y2="150" />
-              <line x1="160" y1="150" x2="270" y2="160" />
-              <line x1="270" y1="160" x2="310" y2="100" />
-              <line x1="310" y1="100" x2="430" y2="80" />
-              <line x1="270" y1="160" x2="340" y2="240" />
-              <line x1="110" y1="220" x2="340" y2="240" strokeOpacity="0.4" />
-              <line x1="430" y1="80" x2="340" y2="240" strokeOpacity="0.3" />
-            </g>
-
-            {/* Tactical Zone Polygons */}
-            {HYDERABAD_ZONES.map((zone) => {
-              const isZoneActive = currentHighlightedZone === zone.id;
-              return (
-                <g
-                  key={zone.id}
-                  onClick={() => setSelectedZone(zone.id === selectedZone ? null : zone.id)}
-                  className="cursor-pointer transition-all duration-300"
-                >
-                  <polygon
-                    points={zone.points}
-                    fill={isZoneActive ? 'rgba(6, 182, 212, 0.25)' : 'rgba(17, 30, 46, 0.55)'}
-                    stroke={isZoneActive ? '#22d3ee' : '#1e3a5f'}
-                    strokeWidth={isZoneActive ? '2.5' : '1'}
-                    className="transition-all hover:stroke-cyan-400 hover:fill-cyan-950/40"
-                    style={{
-                      filter: isZoneActive ? 'drop-shadow(0 0 10px rgba(6, 182, 212, 0.5))' : 'none'
-                    }}
-                  />
-
-                  {/* Zone Label */}
-                  <text
-                    x={zone.center[0]}
-                    y={zone.center[1]}
-                    fill={isZoneActive ? '#ffffff' : '#94a3b8'}
-                    fontSize="10"
-                    fontFamily="monospace"
-                    fontWeight={isZoneActive ? 'bold' : 'normal'}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                  >
-                    {zone.name.toUpperCase()}
-                  </text>
-
-                  {/* Pulsing Pin Beacon when active */}
-                  {isZoneActive && (
-                    <g transform={`translate(${zone.center[0]}, ${zone.center[1] - 14})`}>
-                      <circle cx="0" cy="0" r="16" fill="url(#beaconGlow)" className="animate-ping" />
-                      <circle cx="0" cy="0" r="5" fill="#f43f5e" stroke="#ffffff" strokeWidth="1.5" />
-                    </g>
-                  )}
-                </g>
-              );
-            })}
-          </svg>
-
-          {/* Map Overlay HUD Pill */}
-          <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md bg-[#0a131f]/90 border border-[#1e3a5f] text-[10px] font-mono text-cyan-300 flex items-center gap-1.5 shadow-md">
-            <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-            <span>
-              {currentHighlightedZone
-                ? `FOCUSED SECTOR: ${currentHighlightedZone}`
-                : 'CITY SECTOR TELEMETRY READY'}
+          {/* Floating Spoken Location Badge (Updates immediately when caller speaks!) */}
+          <div className="absolute top-2.5 left-2.5 px-3 py-1.5 rounded-lg bg-[#0a131f]/95 border border-cyan-500/40 text-[11px] font-mono text-cyan-300 flex items-center gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.7)] backdrop-blur-md">
+            <MapPin className="w-3.5 h-3.5 text-rose-400 animate-bounce" />
+            <span className="font-bold">
+              {hasSpokenLocation
+                ? `Spoken Location: ${activeLandmark}`
+                : 'Hyderabad Central — Listening for spoken location...'}
             </span>
           </div>
 
-          <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded bg-[#0a131f]/80 border border-[#1e3a5f]/50 text-[9px] font-mono text-slate-400">
-            Click Sector to Filter Routing
+          <div className="absolute bottom-2.5 right-2.5 px-2.5 py-1 rounded bg-[#0a131f]/90 border border-[#1e3a5f]/60 text-[9px] font-mono text-slate-300 flex items-center gap-1.5">
+            <ExternalLink className="w-3 h-3 text-cyan-400" />
+            <span>Google Maps Live Embed</span>
           </div>
         </div>
       </div>
