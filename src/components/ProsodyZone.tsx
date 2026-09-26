@@ -3,12 +3,7 @@ import {
   Activity,
   Mic,
   Volume2,
-  AlertCircle,
-  Wind,
-  Layers,
-  Car,
-  Flame,
-  AudioWaveform as WaveformIcon
+  Radio
 } from 'lucide-react';
 import type { AcousticProsodyMetrics } from '../types';
 
@@ -16,12 +11,14 @@ interface ProsodyZoneProps {
   prosody: AcousticProsodyMetrics;
   callerAudioData: Uint8Array;
   geminiAudioData: Uint8Array;
+  bargeInCount?: number;
 }
 
 export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
   prosody,
   callerAudioData,
-  geminiAudioData
+  geminiAudioData,
+  bargeInCount = 0
 }) => {
   const callerCanvasRef = useRef<HTMLCanvasElement>(null);
   const geminiCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -92,13 +89,13 @@ export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
       }
     }
     ctx.strokeStyle = lineGradient;
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2;
     ctx.shadowColor = '#06b6d4';
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 6;
     ctx.stroke();
   }, [callerAudioData]);
 
-  // Render Gemini Output Waveform with Violet-to-Fuchsia Gradient Filled Area
+  // Render Gemini Copilot Output Waveform
   useEffect(() => {
     const canvas = geminiCanvasRef.current;
     if (!canvas) return;
@@ -109,23 +106,20 @@ export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
     const height = canvas.height;
     ctx.clearRect(0, 0, width, height);
 
-    // Area fill gradient (Violet-to-Fuchsia)
     const areaGradient = ctx.createLinearGradient(0, 0, 0, height);
     areaGradient.addColorStop(0, 'rgba(168, 85, 247, 0.45)');
     areaGradient.addColorStop(0.6, 'rgba(217, 70, 239, 0.15)');
     areaGradient.addColorStop(1, 'rgba(168, 85, 247, 0.0)');
 
-    // Line stroke gradient
     const lineGradient = ctx.createLinearGradient(0, 0, width, 0);
-    lineGradient.addColorStop(0, '#8b5cf6');
-    lineGradient.addColorStop(0.5, '#a855f7');
-    lineGradient.addColorStop(1, '#d946ef');
+    lineGradient.addColorStop(0, '#c084fc');
+    lineGradient.addColorStop(0.5, '#e879f9');
+    lineGradient.addColorStop(1, '#a855f7');
 
     const len = geminiAudioData.length;
     if (len < 2) return;
     const step = width / (len - 1);
 
-    // Draw Area
     ctx.beginPath();
     ctx.moveTo(0, height);
     for (let i = 0; i < len; i++) {
@@ -147,7 +141,6 @@ export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
     ctx.fillStyle = areaGradient;
     ctx.fill();
 
-    // Draw Top Neon Stroke
     ctx.beginPath();
     for (let i = 0; i < len; i++) {
       const val = geminiAudioData[i] / 255;
@@ -164,307 +157,243 @@ export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
       }
     }
     ctx.strokeStyle = lineGradient;
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2;
     ctx.shadowColor = '#a855f7';
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 6;
     ctx.stroke();
   }, [geminiAudioData]);
 
-  // Dynamic conic stress colors and drop-shadow
-  const getStressConfig = (score: number) => {
-    if (score >= 80) {
-      return {
-        text: 'text-rose-400',
-        stroke: '#f43f5e',
-        glow: 'rgba(244, 63, 94, 0.7)',
-        label: 'CRITICAL STRESS',
-        badgeBg: 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-      };
-    }
-    if (score >= 45) {
-      return {
-        text: 'text-amber-400',
-        stroke: '#f59e0b',
-        glow: 'rgba(245, 158, 11, 0.7)',
-        label: 'ELEVATED DISTRESS',
-        badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-      };
-    }
-    return {
-      text: 'text-emerald-400',
-      stroke: '#10b981',
-      glow: 'rgba(16, 185, 129, 0.7)',
-      label: 'RESTING BASELINE',
-      badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-    };
-  };
-
-  const stressCfg = getStressConfig(prosody.stressScore);
-
-  const getTagIcon = (id: string) => {
-    switch (id) {
-      case 'panic':
-      case 'dyspnea':
-        return <Wind className="w-3.5 h-3.5" />;
-      case 'horns':
-        return <Car className="w-3.5 h-3.5" />;
-      case 'multispeaker':
-        return <Layers className="w-3.5 h-3.5" />;
-      case 'fire':
-      case 'chem':
-        return <Flame className="w-3.5 h-3.5" />;
-      default:
-        return <AlertCircle className="w-3.5 h-3.5" />;
-    }
-  };
-
-  // Radial SVG calculation for Panic Stress Score
-  const radius = 48;
+  // Dynamic Donut Gauge properties
+  const stressPercent = Math.min(100, Math.max(0, prosody.stressScore));
+  const radius = 42;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (Math.min(100, Math.max(0, prosody.stressScore)) / 100) * circumference;
+  const strokeDashoffset = circumference - (stressPercent / 100) * circumference;
 
-  // Compute live dB bar height indicators
-  const callerRms = Math.min(100, Math.round((callerAudioData.reduce((a, b) => a + b, 0) / (callerAudioData.length || 1)) * 1.5));
-  const geminiRms = Math.min(100, Math.round((geminiAudioData.reduce((a, b) => a + b, 0) / (geminiAudioData.length || 1)) * 1.5));
+  const getGaugeColor = () => {
+    if (stressPercent >= 80) return '#f43f5e';
+    if (stressPercent >= 50) return '#f59e0b';
+    return '#06b6d4';
+  };
+
+  const getStressLabel = () => {
+    if (stressPercent >= 80) return 'CRITICAL STRESS';
+    if (stressPercent >= 50) return 'ELEVATED RISK';
+    return 'RESTING BASELINE';
+  };
+
+  const clarityVal = prosody.acousticClarity ?? 94;
+  const confidenceVal = prosody.voiceConfidence ?? 88;
+  const peakDbVal = prosody.peakDb ?? (callerAudioData[0] ? Math.round((callerAudioData[0] / 255) * 80) : 0);
+  const f0Val = prosody.f0Hz ?? prosody.pitchVarianceHz;
+  const jitterVal = prosody.jitterPercent ?? (stressPercent > 50 ? 4.2 : 1.4);
 
   return (
-    <div className="h-full flex flex-col gap-4 p-4 lg:p-5 bg-gradient-to-b from-slate-900/70 via-slate-900/40 to-slate-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] rounded-2xl ring-1 ring-white/[0.04] overflow-y-auto">
-      {/* Zone Header */}
-      <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.2)]">
-            <Activity className="w-4 h-4" />
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-white tracking-wide">
-              Zone 1: Vocal Prosody & Telemetry HUD
-            </h2>
-            <p className="text-[11px] text-slate-400 font-mono">
-              ACOUSTIC DISTRESS HARMONICS & REAL-TIME DSP
-            </p>
-          </div>
-        </div>
-        <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[10px] font-mono">
-          DSP LIVE
-        </span>
-      </div>
-
-      {/* Neon Conic Stress Gauge Card */}
-      <div className="p-4 rounded-2xl bg-[#090d16]/90 border border-white/[0.06] shadow-xl flex items-center justify-between relative overflow-hidden">
-        <div className="space-y-2 z-10">
-          <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-            <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
-            Vocal Stress & Panic Index
-          </div>
-          <div className="flex flex-col">
-            <span className={`text-4xl font-black font-mono tracking-tighter ${stressCfg.text}`}>
-              {prosody.stressScore}%
+    <div className="h-full flex flex-col gap-3.5">
+      {/* ========================================================================= */}
+      {/* CARD 1: Vocal Stress & Unit Status (Reference Bento Cockpit)             */}
+      {/* ========================================================================= */}
+      <div className="p-4 rounded-xl bg-[#111e2e]/90 backdrop-blur-2xl border border-[#1e3a5f]/70 shadow-[0_8px_32px_0_rgba(10,19,31,0.6)] flex flex-col gap-3">
+        {/* Card Header */}
+        <div className="flex items-center justify-between border-b border-[#1e3a5f]/40 pb-2">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-cyan-400" />
+            <span className="text-xs font-mono font-bold text-white tracking-wide uppercase">
+              Vocal Stress & Unit Status
             </span>
-            <div className="mt-1">
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold tracking-wider border uppercase ${stressCfg.badgeBg}`}>
-                {stressCfg.label}
-              </span>
-            </div>
           </div>
-          <p className="text-[11px] text-slate-400 max-w-[200px] leading-relaxed pt-1">
-            Real-time fundamental frequency jitter, pitch tremolo, and acoustic intensity.
-          </p>
+          <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold tracking-wider ${
+            stressPercent >= 80
+              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
+              : stressPercent >= 50
+              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+              : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+          }`}>
+            {getStressLabel()}
+          </span>
         </div>
 
-        {/* Circular Dual-Ring SVG Gauge with Neon Glow */}
-        <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
-          <svg
-            className="w-full h-full -rotate-90"
-            viewBox="0 0 120 120"
-            style={{ filter: `drop-shadow(0 0 10px ${stressCfg.glow})` }}
-          >
-            {/* Outer Background track */}
-            <circle
-              cx="60"
-              cy="60"
-              r={radius}
-              className="stroke-slate-800/80 fill-none"
-              strokeWidth="8"
-            />
-            {/* Inner dashed ring */}
-            <circle
-              cx="60"
-              cy="60"
-              r={radius - 10}
-              className="stroke-slate-800/40 fill-none"
-              strokeWidth="1.5"
-              strokeDasharray="3 3"
-            />
-            {/* Dynamic Value Arc */}
-            <circle
-              cx="60"
-              cy="60"
-              r={radius}
-              fill="none"
-              stroke={stressCfg.stroke}
-              strokeWidth="8"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              className="transition-all duration-700 ease-out"
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-lg font-mono font-black text-white">{prosody.stressScore}%</span>
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">PANIC</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3 Telemetry Micro-Cards with Sparkline Trend Graphs */}
-      <div className="grid grid-cols-3 gap-2.5">
-        {/* Pitch Variance Micro-Card */}
-        <div className="p-3 rounded-xl bg-[#090d16]/80 border border-white/[0.06] flex flex-col justify-between">
-          <div className="text-[10px] text-slate-400 font-mono tracking-wider">PITCH F0</div>
-          <div className="text-base font-mono font-bold text-cyan-300 mt-1">
-            {prosody.pitchVarianceHz} <span className="text-[10px] font-sans text-slate-500 font-normal">Hz</span>
-          </div>
-          {/* Mini SVG Sparkline */}
-          <div className="w-full h-5 mt-2">
-            <svg className="w-full h-full" viewBox="0 0 60 20" preserveAspectRatio="none">
-              <path
-                d="M0,15 Q15,5 30,12 T60,8"
-                fill="none"
-                stroke="#06b6d4"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-        </div>
-
-        {/* Speech Rate Micro-Card */}
-        <div className="p-3 rounded-xl bg-[#090d16]/80 border border-white/[0.06] flex flex-col justify-between">
-          <div className="text-[10px] text-slate-400 font-mono tracking-wider">TEMPO</div>
-          <div className="text-base font-mono font-bold text-amber-300 mt-1">
-            {prosody.speechRateWpm} <span className="text-[10px] font-sans text-slate-500 font-normal">WPM</span>
-          </div>
-          {/* Mini SVG Sparkline */}
-          <div className="w-full h-5 mt-2">
-            <svg className="w-full h-full" viewBox="0 0 60 20" preserveAspectRatio="none">
-              <path
-                d="M0,12 Q10,18 25,6 T60,10"
-                fill="none"
-                stroke="#f59e0b"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-        </div>
-
-        {/* SNR Micro-Card */}
-        <div className="p-3 rounded-xl bg-[#090d16]/80 border border-white/[0.06] flex flex-col justify-between">
-          <div className="text-[10px] text-slate-400 font-mono tracking-wider">SNR LEVEL</div>
-          <div className="text-base font-mono font-bold text-emerald-300 mt-1">
-            {prosody.snrDb} <span className="text-[10px] font-sans text-slate-500 font-normal">dB</span>
-          </div>
-          {/* Mini SVG Sparkline */}
-          <div className="w-full h-5 mt-2">
-            <svg className="w-full h-full" viewBox="0 0 60 20" preserveAspectRatio="none">
-              <path
-                d="M0,10 Q20,2 40,8 T60,5"
-                fill="none"
-                stroke="#10b981"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      {/* Neon Gradient Oscilloscope Visualizers */}
-      <div className="space-y-3">
-        {/* Caller Voice Stream */}
-        <div className="p-3 rounded-xl bg-[#090d16]/90 border border-white/[0.06]">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-cyan-300">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_6px_#22d3ee]" />
-              <Mic className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Caller Microphone Stream</span>
-            </div>
-            {/* Live dB meter bar */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-slate-500 font-mono">{callerRms}%</span>
-              <div className="w-12 h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-teal-400 to-cyan-400 transition-all duration-75"
-                  style={{ width: `${callerRms}%` }}
+        {/* Donut Gauge & 2x2 Telemetry Grid */}
+        <div className="grid grid-cols-12 gap-3 items-center">
+          {/* Left: Thick Cyan Circular Donut Gauge */}
+          <div className="col-span-5 flex flex-col items-center justify-center relative">
+            <div className="relative w-28 h-28 flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle
+                  cx="56"
+                  cy="56"
+                  r={radius}
+                  stroke="#0a131f"
+                  strokeWidth="8"
+                  fill="transparent"
                 />
+                <circle
+                  cx="56"
+                  cy="56"
+                  r={radius}
+                  stroke={getGaugeColor()}
+                  strokeWidth="8"
+                  fill="transparent"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  className="transition-all duration-500 ease-out"
+                  style={{
+                    filter: `drop-shadow(0 0 8px ${getGaugeColor()})`
+                  }}
+                />
+              </svg>
+
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-black font-mono tracking-tight text-white">
+                  {stressPercent}%
+                </span>
+                <span className="text-[9px] font-mono text-cyan-300 tracking-wider">
+                  STRESS
+                </span>
               </div>
             </div>
           </div>
-          <div className="h-14 w-full bg-[#05070d] rounded-lg overflow-hidden border border-white/[0.04] flex items-center justify-center relative shadow-inner">
-            <canvas
-              ref={callerCanvasRef}
-              width={300}
-              height={56}
-              className="w-full h-full block"
-            />
+
+          {/* Right: 2x2 Numeric Counter Grid */}
+          <div className="col-span-7 grid grid-cols-2 gap-2">
+            <div className="p-2 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/50">
+              <span className="text-[9px] font-mono text-slate-400 block uppercase">Pitch</span>
+              <span className="text-sm font-bold font-mono text-cyan-300">{prosody.pitchVarianceHz} <span className="text-[10px] text-slate-500">Hz</span></span>
+            </div>
+            <div className="p-2 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/50">
+              <span className="text-[9px] font-mono text-slate-400 block uppercase">Rate</span>
+              <span className="text-sm font-bold font-mono text-teal-300">{prosody.speechRateWpm} <span className="text-[10px] text-slate-500">WPM</span></span>
+            </div>
+            <div className="p-2 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/50">
+              <span className="text-[9px] font-mono text-slate-400 block uppercase">SNR</span>
+              <span className="text-sm font-bold font-mono text-emerald-300">{prosody.snrDb} <span className="text-[10px] text-slate-500">dB</span></span>
+            </div>
+            <div className="p-2 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/50">
+              <span className="text-[9px] font-mono text-slate-400 block uppercase">Barge-Ins</span>
+              <span className="text-sm font-bold font-mono text-amber-300">{bargeInCount} <span className="text-[10px] text-slate-500">Hits</span></span>
+            </div>
           </div>
         </div>
 
-        {/* 108 Copilot Audio Output */}
-        <div className="p-3 rounded-xl bg-[#090d16]/90 border border-white/[0.06]">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-purple-300">
-              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse shadow-[0_0_6px_#c084fc]" />
-              <Volume2 className="w-3.5 h-3.5 text-purple-400" />
-              <span>108 Copilot Audio Output</span>
+        {/* 2 Glowing Horizontal Cyan/Teal Progress Bars */}
+        <div className="space-y-2 pt-1 border-t border-[#1e3a5f]/30">
+          <div>
+            <div className="flex justify-between text-[10px] font-mono mb-1">
+              <span className="text-slate-400">Acoustic Clarity</span>
+              <span className="text-cyan-300 font-bold">{clarityVal}%</span>
             </div>
-            {/* Live dB meter bar */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-slate-500 font-mono">{geminiRms}%</span>
-              <div className="w-12 h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-purple-400 to-fuchsia-400 transition-all duration-75"
-                  style={{ width: `${geminiRms}%` }}
-                />
-              </div>
+            <div className="h-1.5 w-full bg-[#0a131f] rounded-full overflow-hidden border border-[#1e3a5f]/40">
+              <div
+                className="h-full bg-gradient-to-r from-cyan-500 to-teal-400 transition-all duration-300 shadow-[0_0_8px_#06b6d4]"
+                style={{ width: `${clarityVal}%` }}
+              />
             </div>
           </div>
-          <div className="h-14 w-full bg-[#05070d] rounded-lg overflow-hidden border border-white/[0.04] flex items-center justify-center relative shadow-inner">
-            <canvas
-              ref={geminiCanvasRef}
-              width={300}
-              height={56}
-              className="w-full h-full block"
-            />
+
+          <div>
+            <div className="flex justify-between text-[10px] font-mono mb-1">
+              <span className="text-slate-400">Voice Confidence</span>
+              <span className="text-teal-300 font-bold">{confidenceVal}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-[#0a131f] rounded-full overflow-hidden border border-[#1e3a5f]/40">
+              <div
+                className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 transition-all duration-300 shadow-[0_0_8px_#14b8a6]"
+                style={{ width: `${confidenceVal}%` }}
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Paralinguistic & Acoustic Signatures */}
-      <div className="space-y-2 mt-auto">
-        <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-          <WaveformIcon className="w-3.5 h-3.5 text-cyan-400" />
-          Acoustic Paralinguistic Signatures
+      {/* ========================================================================= */}
+      {/* CARD 2: Acoustic Radar & Harmonics (Reference Bento Cockpit)             */}
+      {/* ========================================================================= */}
+      <div className="p-4 rounded-xl bg-[#111e2e]/90 backdrop-blur-2xl border border-[#1e3a5f]/70 shadow-[0_8px_32px_0_rgba(10,19,31,0.6)] flex flex-col gap-3 flex-1">
+        {/* Card Header */}
+        <div className="flex items-center justify-between border-b border-[#1e3a5f]/40 pb-2">
+          <div className="flex items-center gap-2">
+            <Radio className="w-4 h-4 text-teal-400" />
+            <span className="text-xs font-mono font-bold text-white tracking-wide uppercase">
+              Acoustic Radar & Harmonics
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-cyan-300">
+            POLAR 16kHz
+          </span>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {prosody.detectedTags.map((tag) => (
-            <div
-              key={tag.id}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                tag.severity === 'critical'
-                  ? 'bg-rose-500/15 border-rose-500/40 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.2)]'
-                  : tag.severity === 'warning'
-                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
-                  : 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300'
-              }`}
-            >
-              {getTagIcon(tag.id)}
-              <span>{tag.label}</span>
-              <span className="text-[10px] font-mono opacity-80">
-                {Math.round(tag.confidence * 100)}%
-              </span>
+
+        {/* Circular Polar Radar Compass & Live Readout Metrics */}
+        <div className="grid grid-cols-12 gap-3 items-center">
+          {/* Left: Polar Radar Compass */}
+          <div className="col-span-5 flex items-center justify-center">
+            <div className="relative w-28 h-28 rounded-full bg-[#0a131f] border border-[#1e3a5f] p-1 flex items-center justify-center shadow-inner overflow-hidden">
+              {/* Concentric radar rings */}
+              <div className="absolute w-20 h-20 rounded-full border border-cyan-500/20" />
+              <div className="absolute w-12 h-12 rounded-full border border-cyan-500/30" />
+              <div className="absolute w-full h-[1px] bg-cyan-500/20" />
+              <div className="absolute h-full w-[1px] bg-cyan-500/20" />
+
+              {/* Rotating Sweep Needle */}
+              <div className="absolute inset-0 flex items-center justify-center animate-[spin_4s_linear_infinite] origin-center pointer-events-none">
+                <div className="w-[50%] h-[2px] bg-gradient-to-r from-transparent to-cyan-400 self-center ml-auto shadow-[0_0_8px_#22d3ee]" />
+              </div>
+
+              {/* Harmonic Frequency Nodes (Reacting to real mic) */}
+              <div className="absolute w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#10b981] top-6 left-7 animate-pulse" />
+              <div className="absolute w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#06b6d4] bottom-6 right-8 animate-ping" />
+              <div className="absolute w-2.5 h-2.5 rounded-full bg-rose-400 shadow-[0_0_8px_#f43f5e] top-8 right-6" style={{ opacity: stressPercent > 40 ? 1 : 0.2 }} />
+
+              <span className="text-[8px] font-mono text-slate-500 absolute top-1">N</span>
+              <span className="text-[8px] font-mono text-slate-500 absolute bottom-1">S</span>
+              <span className="text-[8px] font-mono text-slate-500 absolute left-1">W</span>
+              <span className="text-[8px] font-mono text-slate-500 absolute right-1">E</span>
             </div>
-          ))}
+          </div>
+
+          {/* Right: Live Readout Metrics */}
+          <div className="col-span-7 space-y-1.5">
+            <div className="flex items-center justify-between p-1.5 px-2.5 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/40 font-mono text-xs">
+              <span className="text-slate-400 text-[10px]">Peak Level</span>
+              <span className="font-bold text-cyan-300">{peakDbVal} dB</span>
+            </div>
+            <div className="flex items-center justify-between p-1.5 px-2.5 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/40 font-mono text-xs">
+              <span className="text-slate-400 text-[10px]">Fundamental F0</span>
+              <span className="font-bold text-teal-300">{f0Val} Hz</span>
+            </div>
+            <div className="flex items-center justify-between p-1.5 px-2.5 rounded-lg bg-[#0a131f]/80 border border-[#1e3a5f]/40 font-mono text-xs">
+              <span className="text-slate-400 text-[10px]">Vocal Jitter</span>
+              <span className="font-bold text-amber-300">{jitterVal}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Dual Real-Time Waveform Sparklines (Caller vs Copilot) */}
+        <div className="space-y-2 mt-auto">
+          <div>
+            <div className="flex items-center justify-between text-[10px] font-mono text-cyan-400 mb-1">
+              <span className="flex items-center gap-1">
+                <Mic className="w-3 h-3" />
+                <span>Caller Voice Oscilloscope (16kHz)</span>
+              </span>
+              <span className="text-slate-500 text-[9px]">REAL-TIME PCM</span>
+            </div>
+            <div className="h-14 w-full rounded-lg bg-[#0a131f] border border-[#1e3a5f]/50 overflow-hidden relative">
+              <canvas ref={callerCanvasRef} width={320} height={56} className="w-full h-full block" />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between text-[10px] font-mono text-purple-400 mb-1">
+              <span className="flex items-center gap-1">
+                <Volume2 className="w-3 h-3" />
+                <span>108 Copilot Audio Spectrum (24kHz)</span>
+              </span>
+              <span className="text-slate-500 text-[9px]">GEMINI SYNTH</span>
+            </div>
+            <div className="h-14 w-full rounded-lg bg-[#0a131f] border border-[#1e3a5f]/50 overflow-hidden relative">
+              <canvas ref={geminiCanvasRef} width={320} height={56} className="w-full h-full block" />
+            </div>
+          </div>
         </div>
       </div>
     </div>

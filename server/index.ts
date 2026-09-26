@@ -38,8 +38,6 @@ const HYDERABAD_LANDMARKS = [
   'Panjagutta',
   'Charminar',
   'Kukatpally',
-  'Mehdipatnam',
-  'Balanagar',
   'Sanath Nagar',
   'Ameerpet',
   'Kondapur',
@@ -49,7 +47,6 @@ const HYDERABAD_LANDMARKS = [
   'NIMS Hospital',
   'Gandhi Hospital',
   'Osmania Hospital',
-  'PVNR Expressway',
   'Outer Ring Road',
   'Cyber Towers',
   'Miyapur',
@@ -206,29 +203,31 @@ function parseTranscriptDeterministically(spokenText: string, acousticMetrics?: 
     severity = 'HIGH';
   }
 
+  const isRealEmergency = symptomsFound.length > 0 || Boolean(matchedLandmark);
+
   const triageUpdate = {
-    category,
-    categoryLabel,
-    severity,
-    landmark: matchedLandmark || 'Hyderabad Metropolitan Area',
-    exactLocation: matchedLandmark ? `Near ${matchedLandmark}, Hyderabad` : 'Location triangulating from live call telemetry',
+    category: isRealEmergency ? category : 'AWAITING_STREAM',
+    categoryLabel: isRealEmergency ? categoryLabel : 'Awaiting Voice Stream...',
+    severity: isRealEmergency ? severity : 'MODERATE',
+    landmark: matchedLandmark || 'Awaiting Caller Location...',
+    exactLocation: matchedLandmark ? `Near ${matchedLandmark}, Hyderabad` : 'Awaiting Caller Location...',
     vitals: {
       consciousness: lowerText.includes('unconscious')
         ? 'Victim unresponsive / unconscious reported'
-        : 'Caller speaking, consciousness status monitored',
+        : 'Awaiting Voice Stream...',
       breathing: lowerText.includes('breathing') || lowerText.includes('not breathing')
         ? 'Compromised or labored breathing reported'
-        : 'Spontaneous breathing, verifying stability',
+        : 'Awaiting Voice Stream...',
       bloodLoss: lowerText.includes('bleeding') || lowerText.includes('blood')
         ? 'Active bleeding reported on-scene - apply pressure'
-        : 'No acute hemorrhage reported',
+        : 'None Reported',
       traumaNotes: symptomsFound.length > 0
         ? `Identified conditions: ${symptomsFound.join(', ')}`
-        : 'Live triage assessment in progress'
+        : 'Awaiting Voice Stream...'
     },
     callerInfo: {
-      phone: callerPhone || '+91 Emergency Caller',
-      vehiclePlate: vehiclePlate || 'Not specified'
+      phone: callerPhone || 'Not Provided',
+      vehiclePlate: vehiclePlate || 'None Reported'
     },
     recommendedUnit
   };
@@ -302,7 +301,7 @@ Transcribe and translate this emergency audio:
 1. Transcribe the exact words spoken in original Telugu/Hindi/English/Urdu.
 2. Provide clear English translation.
 3. Detect language ('te', 'hi', 'ur-hyderabad', 'en', 'code-switched').
-4. Extract entities: Landmarks (Begumpet, Hitec City, Gachibowli, Secunderabad, Banjara Hills, Charminar, PVNR Expressway, KIMS, Apollo), Vehicle plates, Phone numbers, Symptoms.
+4. Extract entities: Landmarks (Begumpet, Hitec City, Gachibowli, Secunderabad, Banjara Hills, Charminar, KIMS, Apollo), Vehicle plates, Phone numbers, Symptoms.
 5. Provide triage ticket update JSON.
 Return strict JSON with keys: originalTranscript, englishTranslation, detectedLanguage, entities, triageUpdate.`;
 
@@ -343,7 +342,7 @@ Return strict JSON with keys: originalTranscript, englishTranslation, detectedLa
       const parsed = parseTranscriptDeterministically(transcript, acousticMetrics);
 
       // Persist the incident automatically if entities were found
-      if (parsed.triageUpdate && (parsed.entities.length > 0 || parsed.triageUpdate.category !== 'ROAD_ACCIDENT')) {
+      if (parsed.triageUpdate && (parsed.entities.length > 0 || parsed.triageUpdate.category !== 'AWAITING_STREAM')) {
         try {
           const raw = fs.readFileSync(DATA_FILE, 'utf8');
           const incidents = JSON.parse(raw);
@@ -366,7 +365,7 @@ Return strict JSON with keys: originalTranscript, englishTranslation, detectedLa
     }
 
     // If only an audio chunk was received without a transcript or key, return empty/listening state
-    // (Never return fake hardcoded PVNR transcripts!)
+    // (Never return fake hardcoded transcripts!)
     return res.json({
       originalTranscript: '',
       englishTranslation: '',

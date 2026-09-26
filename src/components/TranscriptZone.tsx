@@ -1,305 +1,313 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Languages,
-  User,
-  Bot,
-  Zap,
-  MapPin,
-  Car,
-  Phone,
-  Search,
-  ArrowDown,
-  AlertTriangle,
   Radio,
-  Sparkles
+  Mic,
+  Crosshair
 } from 'lucide-react';
 import type { TranscriptEntry } from '../types';
 
 interface TranscriptZoneProps {
-  transcripts: TranscriptEntry[];
+  transcript: TranscriptEntry[];
+  activeLandmark?: string;
 }
 
-export const TranscriptZone: React.FC<TranscriptZoneProps> = ({ transcripts }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterSpeaker, setFilterSpeaker] = useState<'ALL' | 'CALLER' | 'GEMINI_DISPATCH' | 'OPERATOR_OVERRIDE'>('ALL');
-  const scrollRef = useRef<HTMLDivElement>(null);
+interface MapZone {
+  id: string;
+  name: string;
+  points: string;
+  center: [number, number];
+  color: string;
+}
 
-  // Auto-scroll on new transcript entries
+const HYDERABAD_ZONES: MapZone[] = [
+  {
+    id: 'SECUNDERABAD',
+    name: 'Secunderabad',
+    points: '380,40 470,50 490,110 430,130 370,90',
+    center: [430, 80],
+    color: '#06b6d4'
+  },
+  {
+    id: 'BEGUMPET',
+    name: 'Begumpet',
+    points: '260,60 360,70 380,120 310,140 250,110',
+    center: [310, 100],
+    color: '#2dd4bf'
+  },
+  {
+    id: 'BANJARA_HILLS',
+    name: 'Banjara Hills',
+    points: '230,130 330,130 340,190 260,200 210,160',
+    center: [270, 160],
+    color: '#10b981'
+  },
+  {
+    id: 'HITEC_CITY',
+    name: 'Hitec City',
+    points: '120,110 210,120 220,180 150,190 100,150',
+    center: [160, 150],
+    color: '#38bdf8'
+  },
+  {
+    id: 'GACHIBOWLI',
+    name: 'Gachibowli',
+    points: '70,180 160,180 170,250 100,260 50,220',
+    center: [110, 220],
+    color: '#06b6d4'
+  },
+  {
+    id: 'CHARMINAR',
+    name: 'Charminar',
+    points: '290,190 390,200 410,270 330,280 270,240',
+    center: [340, 240],
+    color: '#f59e0b'
+  }
+];
+
+export const TranscriptZone: React.FC<TranscriptZoneProps> = ({
+  transcript,
+  activeLandmark = ''
+}) => {
+  const [selectedZone, setSelectedZone] = useState<string | null>(null);
+  const streamEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll stream as real words are spoken
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [transcripts]);
+    streamEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [transcript]);
 
-  const filtered = transcripts.filter((t) => {
-    if (filterSpeaker !== 'ALL' && t.speaker !== filterSpeaker) return false;
-    if (searchTerm.trim()) {
-      const q = searchTerm.toLowerCase();
-      return (
-        t.originalText.toLowerCase().includes(q) ||
-        t.translatedText.toLowerCase().includes(q) ||
-        t.entities.some((e) => e.text.toLowerCase().includes(q))
-      );
-    }
-    return true;
-  });
+  // Determine which zone to highlight based on real spoken landmark
+  const currentHighlightedZone = React.useMemo(() => {
+    if (selectedZone) return selectedZone;
+    if (!activeLandmark || activeLandmark.includes('Awaiting')) return null;
 
-  const getLanguageLabel = (code: string) => {
-    switch (code) {
-      case 'te': return 'Telugu';
-      case 'hi': return 'Hindi';
-      case 'ur-hyderabad': return 'Hyderabadi Urdu';
-      case 'code-switched': return 'Bilingual Code-Switch';
-      default: return 'English';
+    const lower = activeLandmark.toLowerCase();
+    for (const zone of HYDERABAD_ZONES) {
+      if (lower.includes(zone.name.toLowerCase()) || lower.includes(zone.id.toLowerCase())) {
+        return zone.id;
+      }
     }
-  };
-
-  const renderEntityBadge = (entity: { text: string; type: string }) => {
-    switch (entity.type) {
-      case 'LANDMARK':
-        return (
-          <span
-            key={entity.text}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)] text-xs font-semibold"
-          >
-            <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-            {entity.text}
-          </span>
-        );
-      case 'VEHICLE_NO':
-        return (
-          <span
-            key={entity.text}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.15)] text-xs font-mono font-bold tracking-wider"
-          >
-            <Car className="w-3.5 h-3.5 text-cyan-400" />
-            {entity.text}
-          </span>
-        );
-      case 'PHONE':
-        return (
-          <span
-            key={entity.text}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)] text-xs font-mono font-semibold"
-          >
-            <Phone className="w-3.5 h-3.5 text-emerald-400" />
-            {entity.text}
-          </span>
-        );
-      default:
-        return (
-          <span
-            key={entity.text}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-300 border border-rose-500/30 shadow-[0_0_10px_rgba(244,63,94,0.2)] text-xs font-bold animate-pulse"
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-            {entity.text}
-          </span>
-        );
-    }
-  };
+    return null;
+  }, [activeLandmark, selectedZone]);
 
   return (
-    <div className="h-full flex flex-col p-4 lg:p-5 bg-gradient-to-b from-slate-900/70 via-slate-900/40 to-slate-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] rounded-2xl ring-1 ring-white/[0.04] overflow-hidden">
-      {/* Zone Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-3 mb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 shadow-[0_0_12px_rgba(99,102,241,0.2)]">
-            <Languages className="w-4 h-4" />
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-white tracking-wide">
-              Zone 2: Real-Time Stream & Bilingual Bridge
+    <div className="h-full flex flex-col gap-3.5 p-4 rounded-xl bg-[#111e2e]/90 backdrop-blur-2xl border border-[#1e3a5f]/70 shadow-[0_8px_32px_0_rgba(10,19,31,0.6)]">
+      {/* ========================================================================= */}
+      {/* TOP HALF: Dark Vector Tactical Map of Hyderabad (Interactive SVG Grid)   */}
+      {/* ========================================================================= */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between border-b border-[#1e3a5f]/40 pb-2">
+          <div className="flex items-center gap-2">
+            <Crosshair className="w-4 h-4 text-cyan-400" />
+            <h2 className="text-xs font-mono font-bold text-white tracking-wide uppercase">
+              Interactive Hyderabad City Operations Map
             </h2>
-            <p className="text-[11px] text-slate-400 font-mono">
-              CONTINUOUS TELUGU / HINDI AUDIO TRANSLATION
-            </p>
+          </div>
+          <div className="flex items-center gap-3 text-[10px] font-mono text-slate-400">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_6px_#22d3ee]" />
+              <span>ORR / RADIAL CORRIDORS</span>
+            </span>
+            <span className="text-slate-500">17°23'N 78°28'E</span>
           </div>
         </div>
 
-        {/* Filter & Search Controls */}
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search feed..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-950/80 border border-white/[0.08] text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-36 sm:w-44 transition-all"
-            />
+        {/* SVG Tactical Map Canvas */}
+        <div className="relative h-64 w-full rounded-xl bg-[#080f1a] border border-[#1e3a5f]/60 overflow-hidden shadow-inner flex items-center justify-center">
+          <svg
+            viewBox="0 0 540 310"
+            className="w-full h-full object-cover select-none"
+          >
+            <defs>
+              {/* Tactical map background grid pattern */}
+              <pattern id="tacticalGrid" width="30" height="30" patternUnits="userSpaceOnUse">
+                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1e3a5f" strokeWidth="0.5" strokeOpacity="0.4" />
+                <circle cx="0" cy="0" r="1" fill="#06b6d4" fillOpacity="0.4" />
+              </pattern>
+
+              {/* Radial gradient for highlighted beacon */}
+              <radialGradient id="beaconGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#06b6d4" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+
+            {/* Grid Backdrop */}
+            <rect width="100%" height="100%" fill="url(#tacticalGrid)" />
+
+            {/* Interconnected Cyan Emergency Route Corridors */}
+            <g stroke="#06b6d4" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.6">
+              <line x1="110" y1="220" x2="160" y2="150" />
+              <line x1="160" y1="150" x2="270" y2="160" />
+              <line x1="270" y1="160" x2="310" y2="100" />
+              <line x1="310" y1="100" x2="430" y2="80" />
+              <line x1="270" y1="160" x2="340" y2="240" />
+              <line x1="110" y1="220" x2="340" y2="240" strokeOpacity="0.4" />
+              <line x1="430" y1="80" x2="340" y2="240" strokeOpacity="0.3" />
+            </g>
+
+            {/* Tactical Zone Polygons */}
+            {HYDERABAD_ZONES.map((zone) => {
+              const isZoneActive = currentHighlightedZone === zone.id;
+              return (
+                <g
+                  key={zone.id}
+                  onClick={() => setSelectedZone(zone.id === selectedZone ? null : zone.id)}
+                  className="cursor-pointer transition-all duration-300"
+                >
+                  <polygon
+                    points={zone.points}
+                    fill={isZoneActive ? 'rgba(6, 182, 212, 0.25)' : 'rgba(17, 30, 46, 0.55)'}
+                    stroke={isZoneActive ? '#22d3ee' : '#1e3a5f'}
+                    strokeWidth={isZoneActive ? '2.5' : '1'}
+                    className="transition-all hover:stroke-cyan-400 hover:fill-cyan-950/40"
+                    style={{
+                      filter: isZoneActive ? 'drop-shadow(0 0 10px rgba(6, 182, 212, 0.5))' : 'none'
+                    }}
+                  />
+
+                  {/* Zone Label */}
+                  <text
+                    x={zone.center[0]}
+                    y={zone.center[1]}
+                    fill={isZoneActive ? '#ffffff' : '#94a3b8'}
+                    fontSize="10"
+                    fontFamily="monospace"
+                    fontWeight={isZoneActive ? 'bold' : 'normal'}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                  >
+                    {zone.name.toUpperCase()}
+                  </text>
+
+                  {/* Pulsing Pin Beacon when active */}
+                  {isZoneActive && (
+                    <g transform={`translate(${zone.center[0]}, ${zone.center[1] - 14})`}>
+                      <circle cx="0" cy="0" r="16" fill="url(#beaconGlow)" className="animate-ping" />
+                      <circle cx="0" cy="0" r="5" fill="#f43f5e" stroke="#ffffff" strokeWidth="1.5" />
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* Map Overlay HUD Pill */}
+          <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md bg-[#0a131f]/90 border border-[#1e3a5f] text-[10px] font-mono text-cyan-300 flex items-center gap-1.5 shadow-md">
+            <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
+            <span>
+              {currentHighlightedZone
+                ? `FOCUSED SECTOR: ${currentHighlightedZone}`
+                : 'CITY SECTOR TELEMETRY READY'}
+            </span>
           </div>
 
-          <div className="flex items-center bg-slate-950/80 border border-white/[0.08] rounded-xl p-1 text-xs">
-            <button
-              onClick={() => setFilterSpeaker('ALL')}
-              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer font-mono text-[11px] ${
-                filterSpeaker === 'ALL' ? 'bg-cyan-600 text-white font-bold shadow-sm' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              ALL
-            </button>
-            <button
-              onClick={() => setFilterSpeaker('CALLER')}
-              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer font-mono text-[11px] ${
-                filterSpeaker === 'CALLER' ? 'bg-cyan-600 text-white font-bold shadow-sm' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              CALLER
-            </button>
-            <button
-              onClick={() => setFilterSpeaker('GEMINI_DISPATCH')}
-              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer font-mono text-[11px] ${
-                filterSpeaker === 'GEMINI_DISPATCH' ? 'bg-cyan-600 text-white font-bold shadow-sm' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              COPILOT
-            </button>
+          <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded bg-[#0a131f]/80 border border-[#1e3a5f]/50 text-[9px] font-mono text-slate-400">
+            Click Sector to Filter Routing
           </div>
         </div>
       </div>
 
-      {/* Transcript Chat Stream */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto space-y-3.5 pr-2 scroll-smooth"
-      >
-        {filtered.length === 0 ? (
-          /* Mission-Critical Radar Standby Screen */
-          <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
-            <div className="relative w-20 h-20 flex items-center justify-center">
-              {/* Radar pulse ripples */}
-              <div className="absolute inset-0 rounded-full border border-cyan-500/20 animate-ping" />
-              <div className="absolute inset-2 rounded-full border border-cyan-500/30" />
-              <div className="absolute inset-4 rounded-full border border-cyan-500/40" />
-              {/* Rotating radar sweep arm */}
-              <div className="absolute inset-0 rounded-full flex items-center justify-center animate-radar-sweep">
-                <div className="w-1/2 h-[2px] bg-gradient-to-r from-transparent to-cyan-400 origin-right" />
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-cyan-950/40 border border-cyan-500/50 flex items-center justify-center text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-                <Radio className="w-5 h-5 animate-pulse" />
-              </div>
-            </div>
-
-            <div className="space-y-1.5 max-w-sm">
-              <h3 className="text-xs font-mono font-bold text-cyan-300 tracking-widest uppercase">
-                108 DISPATCH LINE SECURED // LISTENING ON 16kHz PCM
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                Voice activity detection is standby. Click <span className="text-cyan-400 font-semibold">"Start Live Emergency Call"</span> to speak into your microphone, or trigger an acoustic scenario from the <span className="text-amber-400 font-semibold">Test Bench</span>.
-              </p>
-            </div>
+      {/* ========================================================================= */}
+      {/* BOTTOM HALF: Live Real-Time Voice Stream & Bilingual Translation         */}
+      {/* ========================================================================= */}
+      <div className="flex-1 flex flex-col gap-2 min-h-[220px]">
+        <div className="flex items-center justify-between border-b border-[#1e3a5f]/40 pb-2">
+          <div className="flex items-center gap-2">
+            <Mic className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-xs font-mono font-bold text-white tracking-wide uppercase">
+              Live Real-Time Voice Stream & Bilingual Translation
+            </h3>
           </div>
-        ) : (
-          filtered.map((entry) => {
-            const isCaller = entry.speaker === 'CALLER';
-            const isOperator = entry.speaker === 'OPERATOR_OVERRIDE';
+          <span className="text-[10px] font-mono text-slate-400">
+            MIC 16kHz PCM • ZERO FAKE FALLBACK
+          </span>
+        </div>
 
-            return (
+        {/* Message Stream */}
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[260px]">
+          {transcript.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center p-6 text-center space-y-3 bg-[#0a131f]/60 rounded-xl border border-[#1e3a5f]/40">
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+                <Radio className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs font-mono font-bold text-cyan-300 tracking-wider">
+                  108 DISPATCH LINE SECURED // LISTENING ON 16kHz PCM
+                </div>
+                <p className="text-xs text-slate-400 max-w-md">
+                  Awaiting caller voice stream. Click <strong>"Start Live 108 Call"</strong> above and speak in Telugu, Hindi, Urdu, or English. Spoken words will transcribe and translate here in real time.
+                </p>
+              </div>
+            </div>
+          ) : (
+            transcript.map((entry) => (
               <div
                 key={entry.id}
-                className={`p-4 rounded-2xl border transition-all shadow-md ${
-                  isCaller
-                    ? 'bg-slate-900/80 border-cyan-500/20 shadow-[0_4px_20px_rgba(6,182,212,0.06)]'
-                    : isOperator
-                    ? 'bg-amber-950/20 border-amber-500/30 text-amber-200'
-                    : 'bg-slate-900/80 border-purple-500/20 shadow-[0_4px_20px_rgba(168,85,247,0.06)]'
+                className={`p-3 rounded-xl border transition-all ${
+                  entry.speaker === 'CALLER'
+                    ? 'bg-[#0a131f]/90 border-cyan-500/30 shadow-[0_4px_20px_rgba(6,182,212,0.1)]'
+                    : 'bg-[#0a131f]/90 border-purple-500/30 shadow-[0_4px_20px_rgba(168,85,247,0.1)]'
                 }`}
               >
-                {/* Chat Bubble Header */}
-                <div className="flex items-center justify-between mb-2.5">
-                  <div className="flex items-center gap-2.5">
-                    {isCaller ? (
-                      <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.2)]">
-                        <User className="w-4 h-4" />
-                      </div>
-                    ) : isOperator ? (
-                      <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                        <Zap className="w-4 h-4" />
-                      </div>
-                    ) : (
-                      <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 shadow-[0_0_8px_rgba(168,85,247,0.2)]">
-                        <Bot className="w-4 h-4" />
-                      </div>
-                    )}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-white tracking-wide">
-                          {isCaller
-                            ? 'CALLER (LIVE AUDIO)'
-                            : isOperator
-                            ? '108 DISPATCHER OVERRIDE'
-                            : '108 COPILOT'}
-                        </span>
-                        {!isCaller && !isOperator && (
-                          <span className="px-1.5 py-0.2 rounded bg-purple-500/20 border border-purple-500/30 text-[9px] font-mono text-purple-300">
-                            GEMINI 3.8
-                          </span>
-                        )}
-                        {isCaller && (
-                          <div className="flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse delay-75" />
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse delay-150" />
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-[10px] font-mono text-slate-500">
-                        {entry.timestamp}
-                      </span>
-                    </div>
+                {/* Message Header */}
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${
+                      entry.speaker === 'CALLER' ? 'bg-cyan-400 animate-pulse' : 'bg-purple-400'
+                    }`} />
+                    <span className="text-xs font-bold text-white font-mono">
+                      {entry.speaker === 'CALLER' ? 'CALLER (LIVE MIC)' : '108 COPILOT (GEMINI)'}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400 px-1.5 py-0.5 rounded bg-black/40">
+                      {entry.originalLanguage.toUpperCase()}
+                    </span>
                   </div>
-
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.1] text-slate-300 font-mono">
-                    {getLanguageLabel(entry.originalLanguage)}
+                  <span className="text-[10px] font-mono text-slate-500">
+                    {entry.timestamp}
                   </span>
                 </div>
 
-                {/* Spoken Text */}
-                <div className="text-sm leading-relaxed text-slate-100 font-normal mb-2.5 p-3 rounded-xl bg-slate-950/70 border border-white/[0.04]">
+                {/* Original Spoken Text */}
+                <div className="text-xs text-slate-200 font-medium leading-relaxed">
                   {entry.originalText}
                 </div>
 
-                {/* Live English Translation Inset Bubble */}
-                {entry.originalLanguage !== 'en' && entry.translatedText !== entry.originalText && (
-                  <div className="border-l-2 border-cyan-400 bg-cyan-950/20 pl-3 py-2 pr-3 rounded-r-xl text-cyan-200 text-sm leading-relaxed mb-2.5">
-                    <span className="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                      <Sparkles className="w-3 h-3" />
-                      ENGLISH OPERATOR BRIDGE:
+                {/* Inset English Operator Translation Bridge */}
+                {entry.translatedText && entry.translatedText !== entry.originalText && (
+                  <div className="mt-2 pl-3 py-1.5 border-l-2 border-cyan-400 bg-cyan-950/20 text-cyan-200 text-xs rounded-r-lg font-mono">
+                    <span className="text-[9px] uppercase tracking-wider text-cyan-400 block mb-0.5">
+                      ENGLISH OPERATOR TRANSLATION:
                     </span>
                     {entry.translatedText}
                   </div>
                 )}
 
-                {/* Extracted Entity Micro-Chips */}
+                {/* Extracted Entity Chips */}
                 {entry.entities && entry.entities.length > 0 && (
-                  <div className="pt-2 border-t border-white/[0.06] flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
-                      ENTITIES:
-                    </span>
-                    {entry.entities.map((e) => renderEntityBadge(e))}
+                  <div className="flex flex-wrap gap-1.5 mt-2 pt-1 border-t border-white/[0.06]">
+                    {entry.entities.map((ent, idx) => (
+                      <span
+                        key={idx}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                          ent.type === 'LANDMARK'
+                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                            : ent.type === 'VEHICLE_NO'
+                            ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'
+                            : 'bg-rose-500/10 text-rose-300 border-rose-500/30 animate-pulse'
+                        }`}
+                      >
+                        {ent.type}: {ent.text}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Footer Info */}
-      <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-xs text-slate-500 font-mono">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]" />
-          <span>BILINGUAL SPEECH INGESTION READY</span>
+            ))
+          )}
+          <div ref={streamEndRef} />
         </div>
-        <button
-          onClick={() => {
-            if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-          }}
-          className="hover:text-white transition-colors flex items-center gap-1 cursor-pointer font-sans"
-        >
-          <ArrowDown className="w-3.5 h-3.5" /> Jump to Latest
-        </button>
       </div>
     </div>
   );

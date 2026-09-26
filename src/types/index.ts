@@ -1,5 +1,5 @@
 export type SeverityLevel = 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
-export type IncidentCategory = 'ROAD_ACCIDENT' | 'CARDIAC_ARREST' | 'STRUCTURAL_FIRE' | 'HAZMAT_TOXIC' | 'RESPIRATORY_DISTRESS';
+export type IncidentCategory = 'ROAD_ACCIDENT' | 'CARDIAC_ARREST' | 'STRUCTURAL_FIRE' | 'HAZMAT_TOXIC' | 'RESPIRATORY_DISTRESS' | 'AWAITING_STREAM';
 
 export interface TriageTicket {
   ticketId: string;
@@ -36,6 +36,11 @@ export interface AcousticProsodyMetrics {
   pitchVarianceHz: number;
   speechRateWpm: number;
   snrDb: number;
+  peakDb?: number;
+  f0Hz?: number;
+  jitterPercent?: number;
+  acousticClarity?: number;
+  voiceConfidence?: number;
   detectedTags: {
     id: string;
     label: string;

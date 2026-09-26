@@ -3,9 +3,7 @@ import type {
   AcousticProsodyMetrics,
   TranscriptEntry,
   TTSPreset,
-  SystemTelemetry,
-  IncidentCategory,
-  SeverityLevel
+  SystemTelemetry
 } from '../types';
 
 export const HYDERABAD_CUSTOM_VOCABULARY = [
@@ -19,12 +17,12 @@ export const HYDERABAD_CUSTOM_VOCABULARY = [
   "108 Ambulance",
   "KIMS Hospital",
   "Apollo Jubilee Hills",
-  "ORR Exit",
-  "PVNR Expressway",
-  "Mehdipatnam",
-  "Balanagar",
+  "Outer Ring Road",
   "Sanath Nagar",
-  "Cyber Towers"
+  "Cyber Towers",
+  "Kondapur",
+  "Kukatpally",
+  "Dilsukhnagar"
 ];
 
 export const TTS_ACTION_PRESETS: TTSPreset[] = [
@@ -248,7 +246,7 @@ export class GeminiAudioStack {
                 parts: [{
                   text: `You are AapadaLive, an emergency response AI copilot for Hyderabad 108 Emergency Dispatch.
 You are on a live crisis triage audio call with a high-stress caller who may speak Telugu, Hindi, Hyderabadi Urdu, or English.
-Extract critical landmarks (e.g., Begumpet, Gachibowli, Banjara Hills, Charminar, PVNR Expressway), caller phone numbers, vehicle plates, victim vitals, and severity.
+Extract critical landmarks (e.g., Begumpet, Gachibowli, Banjara Hills, Charminar, Secunderabad), caller phone numbers, vehicle plates, victim vitals, and severity.
 You MUST frequently invoke the update_triage_dashboard tool as an asynchronous function call in the background to update the triage board while speaking calmly.`
                 }]
               },
@@ -271,7 +269,7 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
                       },
                       landmark: {
                         type: 'STRING',
-                        description: 'Closest Hyderabad landmark (e.g., PVNR Expressway Pillar 142, Begumpet, Gachibowli Flyover)'
+                        description: 'Closest Hyderabad landmark (e.g., Begumpet, Gachibowli, Secunderabad, Banjara Hills)'
                       },
                       exactLocation: {
                         type: 'STRING',
@@ -434,6 +432,11 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
           pitchVarianceHz: 0,
           speechRateWpm: 0,
           snrDb: 0,
+          peakDb: inputDb,
+          f0Hz: 0,
+          jitterPercent: 0,
+          acousticClarity: 95,
+          voiceConfidence: 80,
           detectedTags: [
             { id: 'ambient', label: 'Ambient Silence / Line Open', severity: 'info', confidence: 0.99, active: true }
           ]
@@ -461,6 +464,11 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
           pitchVarianceHz: Math.min(320, Math.max(80, estF0)),
           speechRateWpm: estWpm,
           snrDb: estSnr,
+          peakDb: inputDb,
+          f0Hz: estF0,
+          jitterPercent: Math.min(15, Math.max(1, Math.round(rms * 24))),
+          acousticClarity: Math.min(99, Math.max(35, Math.round(96 - (estSnr < 15 ? 25 : 5)))),
+          voiceConfidence: Math.min(98, Math.max(45, Math.round(78 + (estSnr > 18 ? 18 : 0)))),
           detectedTags: activeTags
         };
         this.callbacks.onProsodyUpdate(this.currentProsody);
@@ -631,24 +639,24 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
    */
   private executeTriageToolCall(callId: string, args: any) {
     const updatedTicket: Partial<TriageTicket> = {
-      category: args.category || 'ROAD_ACCIDENT',
-      categoryLabel: (args.category || 'ROAD_ACCIDENT').replace(/_/g, ' '),
-      severity: args.severity || 'CRITICAL',
-      landmark: args.landmark || 'Gachibowli Junction',
-      exactLocation: args.exactLocation || 'Near Outer Ring Road Exit #19',
+      category: args.category || 'AWAITING_STREAM',
+      categoryLabel: args.category ? args.category.replace(/_/g, ' ') : 'Awaiting Voice Stream...',
+      severity: args.severity || 'MODERATE',
+      landmark: args.landmark || 'Awaiting Caller Location...',
+      exactLocation: args.exactLocation || 'Awaiting Caller Location...',
       extractedVitals: {
-        consciousness: args.vitals?.consciousness || 'Unresponsive / Agonal Gasping',
-        breathing: args.vitals?.breathing || 'Severe Dyspnea (10 bpm)',
-        pulseStatus: args.vitals?.pulseStatus || 'Weak carotid pulse detected',
-        bloodLoss: args.vitals?.bloodLoss || 'Active arterial hemorrhage reported',
-        traumaNotes: args.vitals?.traumaNotes || 'Head trauma and multiple fractures'
+        consciousness: args.vitals?.consciousness || 'Awaiting Voice Stream...',
+        breathing: args.vitals?.breathing || 'Awaiting Voice Stream...',
+        pulseStatus: args.vitals?.pulseStatus,
+        bloodLoss: args.vitals?.bloodLoss,
+        traumaNotes: args.vitals?.traumaNotes || 'Awaiting Voice Stream...'
       },
       callerIdentity: {
-        phone: args.callerInfo?.phone || '+91 98490 12345',
-        vehiclePlate: args.callerInfo?.vehiclePlate || 'TS 09 UB 4402'
+        phone: args.callerInfo?.phone || 'Not Provided',
+        vehiclePlate: args.callerInfo?.vehiclePlate || 'None Reported'
       },
       recommendedUnit: {
-        unitType: args.recommendedUnit || 'ALS-108 Ambulance + Trauma Team',
+        unitType: args.recommendedUnit || 'ALS-108 Emergency Ambulance',
         unitId: '108-HYD-42',
         etaMinutes: 4,
         specialEquipment: ['Spinal Immobilization Board', 'Defibrillator AED', 'Oxygen Ventilator']
@@ -721,291 +729,7 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
     }
   }
 
-  /**
-   * Offline Test Bench Scenarios: (PVNR Expressway, DLF Cybercity, Balanagar Fire)
-   */
-  public async startSimulatedDemoCall(scenarioType: 'PVNR_ACCIDENT' | 'GACHIBOWLI_CARDIAC' | 'BALANAGAR_FIRE' = 'PVNR_ACCIDENT') {
-    this.stopCall();
-    await this.ensureAudioContext();
-    this.isSimulating = true;
 
-    this.callbacks.onTelemetryUpdate({
-      connectionStatus: 'CONNECTED',
-      activeModel: 'gemini-3.8-live + gemini-3.5-live-translate-preview',
-      interactionStatus: 'IN_PROGRESS',
-      latencyMs: 32
-    });
-
-    const scenarios = {
-      PVNR_ACCIDENT: {
-        title: 'Road Traffic Accident on PVNR Expressway (Pillar 142, Mehdipatnam)',
-        steps: [
-          {
-            delay: 400,
-            speaker: 'CALLER' as const,
-            lang: 'code-switched' as const,
-            orig: 'హలో 108?! Please come fast! PVNR Expressway Pillar 142 దగ్గర severe accident అయింది! TS 09 UB 4402 car overturned!',
-            trans: 'Hello 108?! Please come fast! Near PVNR Expressway Pillar 142, a severe accident occurred! Car TS 09 UB 4402 overturned!',
-            prosody: {
-              stressScore: 92,
-              pitchVarianceHz: 195,
-              speechRateWpm: 215,
-              snrDb: 14,
-              detectedTags: [
-                { id: 'panic', label: 'Acute Panic / Hyperventilation', severity: 'critical' as const, confidence: 0.96, active: true },
-                { id: 'horns', label: 'Background Traffic & Heavy Horns', severity: 'warning' as const, confidence: 0.89, active: true },
-                { id: 'multispeaker', label: 'Multiple Overlapping Bystander Voices', severity: 'warning' as const, confidence: 0.84, active: true }
-              ]
-            },
-            toolUpdate: {
-              category: 'ROAD_ACCIDENT' as IncidentCategory,
-              categoryLabel: 'Road Traffic Accident',
-              severity: 'CRITICAL' as SeverityLevel,
-              landmark: 'PVNR Expressway Pillar 142',
-              exactLocation: 'Mehdipatnam Ramp Descent, Hyderabad',
-              extractedVitals: {
-                consciousness: '2 victims unconscious, 1 driver trapped',
-                breathing: 'Irregular, agonal gasping observed',
-                pulseStatus: 'Rapid, thready',
-                bloodLoss: 'Severe arterial laceration from shattered windshield',
-                traumaNotes: 'Vehicle overturned on median, fuel leak suspected'
-              },
-              callerIdentity: {
-                phone: '+91 98490 44108',
-                vehiclePlate: 'TS 09 UB 4402'
-              },
-              recommendedUnit: {
-                unitType: 'ALS-108 Ambulance + Extrication Hydraulic Cutter Unit',
-                unitId: '108-HYD-42',
-                etaMinutes: 3,
-                specialEquipment: ['Jaws of Life Cutter', 'Cervical Collars', 'High-Flow O2']
-              }
-            }
-          },
-          {
-            delay: 3800,
-            speaker: 'GEMINI_DISPATCH' as const,
-            lang: 'en' as const,
-            orig: 'This is Hyderabad 108 Dispatch. Advanced Life Support Unit 42 has been dispatched to PVNR Pillar 142. Do not attempt to move the trapped driver if spine injury is suspected. Keep the airway open and clear bystanders—',
-            trans: 'This is Hyderabad 108 Dispatch. Advanced Life Support Unit 42 has been dispatched to PVNR Pillar 142. Do not attempt to move the trapped driver if spine injury is suspected. Keep the airway open and clear bystanders—',
-            prosody: null,
-            toolUpdate: null,
-            triggerBargeInAfter: 2800
-          },
-          {
-            delay: 6600,
-            speaker: 'CALLER' as const,
-            lang: 'te' as const,
-            orig: 'అయ్యో రక్తం విపరీతంగా కారుతోంది! Car engine నుండి పొగ వస్తోంది! What should we do?!',
-            trans: 'Oh God, blood is gushing heavily! Smoke is coming from the car engine! What should we do?!',
-            prosody: {
-              stressScore: 98,
-              pitchVarianceHz: 230,
-              speechRateWpm: 235,
-              snrDb: 11,
-              detectedTags: [
-                { id: 'fire', label: 'Engine Smoke / Fire Hazard Detected', severity: 'critical' as const, confidence: 0.94, active: true },
-                { id: 'tremor', label: 'Severe Vocal Tremor', severity: 'critical' as const, confidence: 0.97, active: true },
-                { id: 'screaming', label: 'High Decibel Agonal Vocalization', severity: 'critical' as const, confidence: 0.91, active: true }
-              ]
-            },
-            toolUpdate: {
-              severity: 'CRITICAL' as SeverityLevel,
-              category: 'ROAD_ACCIDENT' as IncidentCategory,
-              extractedVitals: {
-                consciousness: 'Driver slipping into comatose state',
-                breathing: 'Tachypnea with stridor',
-                bloodLoss: 'Active arterial blood loss - immediate tourniquet required',
-                traumaNotes: 'IMMINENT VEHICLE FIRE: 2 bystanders evacuating passenger'
-              },
-              recommendedUnit: {
-                unitType: 'ALS-108 + Telangana State Fire Service (Langar Houz Station)',
-                unitId: '108-HYD-42 & TSF-08',
-                etaMinutes: 2,
-                specialEquipment: ['Fire Suppression Foam', 'Mass Casualty Kit', 'AED']
-              }
-            }
-          },
-          {
-            delay: 10500,
-            speaker: 'GEMINI_DISPATCH' as const,
-            lang: 'te' as const,
-            orig: 'వెంటనే అందరినీ కారుకు 20 మీటర్ల దూరంలోకి తీసుకురండి! క్లీన్ క్లాత్‌తో గాయంపై గట్టిగా ప్రెజర్ పెట్టండి. Fire Engine and 108 are on Mehdipatnam flyover right now!',
-            trans: 'Immediately move everyone 20 meters away from the vehicle! Apply firm continuous pressure on the wound with a clean cloth. Fire Engine and 108 are on Mehdipatnam flyover right now!',
-            prosody: null,
-            toolUpdate: null
-          }
-        ]
-      },
-      GACHIBOWLI_CARDIAC: {
-        title: 'Bystander CPR at DLF Cybercity, Gachibowli',
-        steps: [
-          {
-            delay: 400,
-            speaker: 'CALLER' as const,
-            lang: 'hi' as const,
-            orig: 'इमरजेंसी! DLF Gate 2 Gachibowli के पास एक 45 वर्षीय व्यक्ति अचानक बेहोश होकर गिर पड़े! सांस नहीं ले पा रहे हैं!',
-            trans: 'Emergency! Near DLF Gate 2 Gachibowli, a 45-year-old person suddenly collapsed unconscious! Not breathing!',
-            prosody: {
-              stressScore: 88,
-              pitchVarianceHz: 180,
-              speechRateWpm: 190,
-              snrDb: 18,
-              detectedTags: [
-                { id: 'arrest', label: 'Potential Out-of-Hospital Cardiac Arrest (OHCA)', severity: 'critical' as const, confidence: 0.95, active: true },
-                { id: 'gasp', label: 'Agonal Respiration Acoustic Signature', severity: 'critical' as const, confidence: 0.91, active: true }
-              ]
-            },
-            toolUpdate: {
-              category: 'CARDIAC_ARREST' as IncidentCategory,
-              categoryLabel: 'Sudden Cardiac Arrest',
-              severity: 'CRITICAL' as SeverityLevel,
-              landmark: 'DLF Cybercity Gate 2, Gachibowli',
-              exactLocation: 'Opposite Radisson Hitec City, Gachibowli, Hyderabad',
-              extractedVitals: {
-                consciousness: 'Unresponsive to verbal and physical stimuli',
-                breathing: 'No normal breathing / Agonal gasping',
-                pulseStatus: 'No carotid pulse felt by bystander',
-                traumaNotes: 'Collapsed while walking, no major external bleeding'
-              },
-              callerIdentity: {
-                phone: '+91 99887 65432'
-              },
-              recommendedUnit: {
-                unitType: 'ALS-108 Ambulance + Automated External Defibrillator (AED)',
-                unitId: '108-CYB-14',
-                etaMinutes: 3,
-                specialEquipment: ['Automated CPR Device', 'Lucas-3', 'Biphasic Defibrillator']
-              }
-            }
-          },
-          {
-            delay: 3900,
-            speaker: 'GEMINI_DISPATCH' as const,
-            lang: 'hi' as const,
-            orig: 'घबराइए मत! हमने Apollo Cradle Gachibowli से ALS 108 एम्बुलेंस तुरंत रवाना कर दी है। आप मरीज की छाती के बीच दोनों हाथ रखें—',
-            trans: 'Do not panic! We have dispatched ALS 108 Ambulance from Apollo Cradle Gachibowli immediately. Place both hands in the center of the chest—',
-            prosody: null,
-            toolUpdate: null,
-            triggerBargeInAfter: 2600
-          },
-          {
-            delay: 6500,
-            speaker: 'CALLER' as const,
-            lang: 'code-switched' as const,
-            orig: 'Wait! Nearby security guard has an AED box from DLF Tower! How to use it?!',
-            trans: 'Wait! Nearby security guard has an AED box from DLF Tower! How to use it?!',
-            prosody: {
-              stressScore: 78,
-              pitchVarianceHz: 160,
-              speechRateWpm: 210,
-              snrDb: 22,
-              detectedTags: [
-                { id: 'aed', label: 'Public Access AED Available On-Scene', severity: 'info' as const, confidence: 0.98, active: true },
-                { id: 'multispeaker', label: 'Bystander & Security Dual Talk', severity: 'warning' as const, confidence: 0.88, active: true }
-              ]
-            },
-            toolUpdate: {
-              severity: 'CRITICAL' as SeverityLevel,
-              extractedVitals: {
-                consciousness: 'Unresponsive, AED pads being applied',
-                breathing: 'Zero spontaneous respiration',
-                traumaNotes: 'AED pad 1 placed right upper chest, pad 2 left lower ribcage'
-              }
-            }
-          }
-        ]
-      },
-      BALANAGAR_FIRE: {
-        title: 'Industrial Chemical Fire near Sanath Nagar / Balanagar IDA',
-        steps: [
-          {
-            delay: 400,
-            speaker: 'CALLER' as const,
-            lang: 'ur-hyderabad' as const,
-            orig: 'అరే భై 108! Balanagar IDA Phase 1 chemical godown mein aag lag gayi hai! Bohot zyaada kaala dhuaan aa raha hai!',
-            trans: 'Emergency 108! Chemical warehouse in Balanagar IDA Phase 1 has caught fire! Massive black toxic smoke billows out!',
-            prosody: {
-              stressScore: 94,
-              pitchVarianceHz: 210,
-              speechRateWpm: 220,
-              snrDb: 12,
-              detectedTags: [
-                { id: 'chem', label: 'Toxic Chemical Gas Inhalation Risk', severity: 'critical' as const, confidence: 0.97, active: true },
-                { id: 'fire', label: 'Industrial Conflagration Explosions', severity: 'critical' as const, confidence: 0.93, active: true },
-                { id: 'dyspnea', label: 'Audible Wheezing & Coughing Spasms', severity: 'critical' as const, confidence: 0.89, active: true }
-              ]
-            },
-            toolUpdate: {
-              category: 'STRUCTURAL_FIRE' as IncidentCategory,
-              categoryLabel: 'Chemical Warehouse Fire',
-              severity: 'CRITICAL' as SeverityLevel,
-              landmark: 'Balanagar Industrial Area Phase 1',
-              exactLocation: 'Plot 48, Near Sanath Nagar Railway Crossing, Hyderabad',
-              extractedVitals: {
-                consciousness: 'Multiple workers evacuated, 3 trapped on 1st floor',
-                breathing: 'Severe toxic smoke inhalation and chemical dyspnea',
-                traumaNotes: 'Solvent drums detonating, sulfurous fumes reported'
-              },
-              callerIdentity: {
-                phone: '+91 94401 99881'
-              },
-              recommendedUnit: {
-                unitType: 'Hazmat Fire Tender + 3 ALS Ambulances + Police Cordon',
-                unitId: 'TS-FIRE-JEEDIMETLA & 108-HYD-18',
-                etaMinutes: 4,
-                specialEquipment: ['SCBA Breathing Apparatus', 'Chemical Foam', 'Burn Trauma Kits']
-              }
-            }
-          }
-        ]
-      }
-    };
-
-    const currentScenario = scenarios[scenarioType] || scenarios.PVNR_ACCIDENT;
-
-    for (const step of currentScenario.steps) {
-      const timeout = setTimeout(() => {
-        if (!this.isSimulating) return;
-
-        this.callbacks.onTranscriptReceived({
-          id: `step-${Date.now()}`,
-          timestamp: new Date().toLocaleTimeString(),
-          speaker: step.speaker,
-          originalText: step.orig,
-          originalLanguage: step.lang,
-          translatedText: step.trans,
-          entities: this.extractEntities(step.orig + ' ' + step.trans),
-          isComplete: true
-        });
-
-        if (step.prosody) {
-          this.callbacks.onProsodyUpdate(step.prosody);
-        }
-
-        if (step.toolUpdate) {
-          this.callbacks.onTriageUpdate({
-            ...step.toolUpdate,
-            ticketId: `HYD-108-${Date.now().toString().slice(-4)}`,
-            lastUpdated: new Date().toLocaleTimeString(),
-            dispatchStatus: 'PENDING_APPROVAL'
-          });
-        }
-
-        const bargeInDelay = (step as any).triggerBargeInAfter;
-        if (bargeInDelay) {
-          const bargeInTimeout = setTimeout(() => {
-            if (!this.isSimulating) return;
-            this.handleBargeInInterruption();
-          }, bargeInDelay);
-          this.simulationIntervals.push(bargeInTimeout);
-        }
-
-      }, step.delay);
-
-      this.simulationIntervals.push(timeout);
-    }
-  }
 
   private startSimulatedLiveSession() {
     this.telemetry.connectionStatus = 'CONNECTED';
