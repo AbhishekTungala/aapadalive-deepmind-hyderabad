@@ -102,8 +102,15 @@ export function App() {
   const [ticket, setTicket] = useState<TriageTicket>(INITIAL_TRIAGE_TICKET);
   const [callerAudioData, setCallerAudioData] = useState<Uint8Array>(new Uint8Array(64));
   const [geminiAudioData, setGeminiAudioData] = useState<Uint8Array>(new Uint8Array(64));
+  // Purge any historical key stored in localStorage
+  useEffect(() => {
+    try {
+      localStorage.removeItem('gemini_api_key');
+    } catch {}
+  }, []);
+
   const [apiKey, setApiKey] = useState<string>(
-    () => localStorage.getItem('gemini_api_key') || ((import.meta as any).env?.VITE_GEMINI_API_KEY as string) || ''
+    () => (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('gemini_api_key') : '') || ''
   );
 
   const [autoHangUpCountdown, setAutoHangUpCountdown] = useState<number | null>(null);
@@ -220,7 +227,10 @@ export function App() {
 
   const handleSetApiKey = (key: string) => {
     setApiKey(key);
-    localStorage.setItem('gemini_api_key', key);
+    sessionStorage.setItem('gemini_api_key', key);
+    try {
+      localStorage.removeItem('gemini_api_key');
+    } catch {}
     if (audioStackRef.current) {
       audioStackRef.current.setApiKey(key);
     }
@@ -228,13 +238,41 @@ export function App() {
 
   const handleStartLiveMic = () => {
     setTranscripts([]);
+    setTicket({
+      ticketId: `HYD-108-${Date.now().toString().slice(-4)}`,
+      timestamp: new Date().toLocaleTimeString(),
+      category: 'ROAD_ACCIDENT',
+      categoryLabel: 'Awaiting Voice Input...',
+      severity: 'MODERATE',
+      landmark: 'Listening for landmark...',
+      exactLocation: 'Hyderabad Dispatch Line Open',
+      extractedVitals: {
+        consciousness: 'Listening to caller audio...',
+        breathing: 'Acoustic prosody monitor active',
+        pulseStatus: 'Awaiting report',
+        bloodLoss: 'Awaiting report',
+        traumaNotes: 'Speak into microphone to populate live triage assessment'
+      },
+      callerIdentity: {
+        phone: 'Incoming Emergency Line',
+        vehiclePlate: 'Monitoring audio...'
+      },
+      recommendedUnit: {
+        unitType: 'ALS-108 Ambulance Unit (Standby)',
+        unitId: 'Standby',
+        etaMinutes: 4,
+        specialEquipment: ['Oxygen', 'First Aid', 'AED']
+      },
+      dispatchStatus: 'PENDING_APPROVAL',
+      lastUpdated: new Date().toLocaleTimeString()
+    });
     setProsody({
-      stressScore: 10,
+      stressScore: 0,
       pitchVarianceHz: 0,
       speechRateWpm: 0,
-      snrDb: 6,
+      snrDb: 0,
       detectedTags: [
-        { id: 'live-open', label: '108 Live Audio Line Open', severity: 'info', confidence: 0.99, active: true }
+        { id: 'live-open', label: '108 Live Audio Line Open — Listening to Mic', severity: 'info', confidence: 1.0, active: true }
       ]
     });
     setTelemetry((t) => ({ ...t, callState: 'ACTIVE' }));

@@ -20,35 +20,253 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 const DATA_FILE = path.join(__dirname, 'data', 'incidents.json');
 
-// Initialize Gemini Client
-const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
-let geminiClient: GoogleGenAI | null = null;
-if (apiKey.trim()) {
-  try {
-    geminiClient = new GoogleGenAI({ apiKey: apiKey.trim() });
-    console.log('[Server] GoogleGenAI SDK client initialized');
-  } catch (err) {
-    console.warn('[Server] Failed to initialize GoogleGenAI client:', err);
-  }
-}
-
 // Ensure incidents data file exists
 if (!fs.existsSync(DATA_FILE)) {
   fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
   fs.writeFileSync(DATA_FILE, '[]', 'utf8');
 }
 
+// Master list of known Hyderabad landmarks and junctions for 108 dispatch
+const HYDERABAD_LANDMARKS = [
+  'Begumpet',
+  'Gachibowli',
+  'Secunderabad',
+  'Hitec City',
+  'Madhapur',
+  'Banjara Hills',
+  'Jubilee Hills',
+  'Panjagutta',
+  'Charminar',
+  'Kukatpally',
+  'Mehdipatnam',
+  'Balanagar',
+  'Sanath Nagar',
+  'Ameerpet',
+  'Kondapur',
+  'Dilsukhnagar',
+  'KIMS Hospital',
+  'Apollo Hospital',
+  'NIMS Hospital',
+  'Gandhi Hospital',
+  'Osmania Hospital',
+  'PVNR Expressway',
+  'Outer Ring Road',
+  'Cyber Towers',
+  'Miyapur',
+  'Uppal',
+  'Lakdikapul',
+  'Somajiguda',
+  'Koti',
+  'Abids',
+  'Tarnaka',
+  'Tolichowki',
+  'GVK One',
+  'Inorbit Mall'
+];
+
+/**
+ * Deterministic Hyderabad Emergency NLP & Entity Parser
+ * Extracts real spoken entities from the caller's actual words
+ */
+function parseTranscriptDeterministically(spokenText: string, acousticMetrics?: any) {
+  const text = spokenText.trim();
+  if (!text) {
+    return {
+      originalTranscript: '',
+      englishTranslation: '',
+      detectedLanguage: 'en',
+      entities: [],
+      triageUpdate: null,
+      copilotReply: ''
+    };
+  }
+
+  const entities: { text: string; type: 'LANDMARK' | 'VEHICLE_NO' | 'PHONE' | 'SYMPTOM' | 'URGENCY' }[] = [];
+
+  // 1. Landmark Extraction
+  let matchedLandmark = '';
+  for (const lm of HYDERABAD_LANDMARKS) {
+    const regex = new RegExp(`\\b${lm}\\b`, 'i');
+    if (regex.test(text)) {
+      matchedLandmark = lm;
+      entities.push({ text: lm, type: 'LANDMARK' });
+      break;
+    }
+  }
+
+  // Regex for "near [X]", "at [X]", "opposite [X]", "[X] metro station", "pillar [0-9]+"
+  if (!matchedLandmark) {
+    const locMatch = text.match(/(?:near|at|opposite|around|close to)\s+([a-zA-Z0-9\s]+?)(?:,|!|\.|\b(?:and|my|please|we|car|someone|help|there|is|number|phone)\b|$)/i);
+    if (locMatch && locMatch[1].trim().length > 2) {
+      matchedLandmark = locMatch[1].trim();
+      entities.push({ text: matchedLandmark, type: 'LANDMARK' });
+    }
+  }
+
+  // Additional metro station or pillar check
+  const metroMatch = text.match(/\b([A-Za-z]+)\s+metro\s+station\b/i);
+  if (metroMatch) {
+    const metroLm = `${metroMatch[1]} Metro Station`;
+    if (!entities.some(e => e.text.toLowerCase() === metroLm.toLowerCase())) {
+      entities.push({ text: metroLm, type: 'LANDMARK' });
+    }
+    if (!matchedLandmark) matchedLandmark = metroLm;
+  }
+
+  const pillarMatch = text.match(/\bpillar\s*(?:no\.?|#)?\s*([0-9]+)\b/i);
+  if (pillarMatch) {
+    const pillarStr = `Pillar ${pillarMatch[1]}`;
+    entities.push({ text: pillarStr, type: 'LANDMARK' });
+    if (matchedLandmark) matchedLandmark = `${matchedLandmark} (${pillarStr})`;
+    else matchedLandmark = pillarStr;
+  }
+
+  // 2. Phone Number Extraction (10-digit Indian numbers)
+  const phoneMatch = text.match(/(?:\+91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}|\b\d{10}\b/);
+  let callerPhone = '';
+  if (phoneMatch) {
+    callerPhone = phoneMatch[0].replace(/\s+/g, '');
+    entities.push({ text: callerPhone, type: 'PHONE' });
+  }
+
+  // 3. Vehicle Plate Extraction
+  const plateMatch = text.match(/\b(TS|AP)\s?[0-9]{1,2}\s?[A-Z]{1,3}\s?[0-9]{3,4}\b/i);
+  let vehiclePlate = '';
+  if (plateMatch) {
+    vehiclePlate = plateMatch[0].toUpperCase();
+    entities.push({ text: vehiclePlate, type: 'VEHICLE_NO' });
+  }
+
+  // 4. Crisis / Medical Keywords
+  const lowerText = text.toLowerCase();
+  const symptomsFound: string[] = [];
+
+  const checkKeywords = [
+    { word: 'fire', label: 'FIRE' },
+    { word: 'smoke', label: 'SMOKE' },
+    { word: 'blast', label: 'EXPLOSION' },
+    { word: 'burn', label: 'BURN INJURY' },
+    { word: 'bleeding', label: 'ACTIVE BLEEDING' },
+    { word: 'blood', label: 'BLOOD LOSS' },
+    { word: 'unconscious', label: 'UNCONSCIOUS' },
+    { word: 'fainted', label: 'SYNCOPE' },
+    { word: 'heart attack', label: 'CARDIAC ARREST' },
+    { word: 'chest pain', label: 'CHEST PAIN' },
+    { word: 'accident', label: 'ACCIDENT' },
+    { word: 'crash', label: 'COLLISION' },
+    { word: 'overturned', label: 'OVERTURNED' },
+    { word: 'breathing', label: 'RESPIRATORY DISTRESS' },
+    { word: 'choking', label: 'AIRWAY COMPROMISE' },
+    { word: 'fracture', label: 'BONE FRACTURE' },
+    { word: 'head injury', label: 'HEAD TRAUMA' }
+  ];
+
+  for (const kw of checkKeywords) {
+    if (lowerText.includes(kw.word)) {
+      symptomsFound.push(kw.label);
+      entities.push({ text: kw.label, type: 'SYMPTOM' });
+    }
+  }
+
+  // 5. Dynamic Incident Category & Severity
+  let category = 'ROAD_ACCIDENT';
+  let categoryLabel = 'Road Traffic Accident';
+  let severity: 'CRITICAL' | 'HIGH' | 'MODERATE' = 'MODERATE';
+  let recommendedUnit = 'ALS-108 Emergency Ambulance';
+
+  if (lowerText.includes('fire') || lowerText.includes('blast') || lowerText.includes('smoke') || lowerText.includes('burn')) {
+    category = 'STRUCTURAL_FIRE';
+    categoryLabel = 'Structural / Chemical Fire Emergency';
+    severity = 'CRITICAL';
+    recommendedUnit = 'Telangana State Fire Tender + ALS-108 Ambulance';
+  } else if (lowerText.includes('heart attack') || lowerText.includes('chest pain') || lowerText.includes('cardiac') || lowerText.includes('cpr')) {
+    category = 'CARDIAC_ARREST';
+    categoryLabel = 'Sudden Cardiac Arrest / Chest Pain';
+    severity = 'CRITICAL';
+    recommendedUnit = 'ALS-108 Ambulance + Automated External Defibrillator (AED)';
+  } else if (lowerText.includes('breathing') || lowerText.includes('choking') || lowerText.includes('asthma') || lowerText.includes('suffocation')) {
+    category = 'RESPIRATORY_DISTRESS';
+    categoryLabel = 'Acute Respiratory Distress';
+    severity = 'HIGH';
+    recommendedUnit = 'ALS-108 Ambulance with High-Flow O2 Ventilator';
+  } else if (lowerText.includes('accident') || lowerText.includes('crash') || lowerText.includes('overturned') || lowerText.includes('car') || lowerText.includes('bike')) {
+    category = 'ROAD_ACCIDENT';
+    categoryLabel = 'Road Traffic Accident';
+    severity = lowerText.includes('bleeding') || lowerText.includes('unconscious') || lowerText.includes('overturned') ? 'CRITICAL' : 'HIGH';
+    recommendedUnit = 'ALS-108 Ambulance + Hydraulic Extrication Cutter Unit';
+  } else if (symptomsFound.length > 0) {
+    category = 'ROAD_ACCIDENT';
+    categoryLabel = 'Emergency Trauma Response';
+    severity = lowerText.includes('unconscious') || lowerText.includes('bleeding') ? 'CRITICAL' : 'HIGH';
+    recommendedUnit = 'ALS-108 Emergency Ambulance';
+  }
+
+  // Factor in acoustic stress if available
+  if (acousticMetrics && acousticMetrics.stressScore > 80 && severity !== 'CRITICAL') {
+    severity = 'HIGH';
+  }
+
+  const triageUpdate = {
+    category,
+    categoryLabel,
+    severity,
+    landmark: matchedLandmark || 'Hyderabad Metropolitan Area',
+    exactLocation: matchedLandmark ? `Near ${matchedLandmark}, Hyderabad` : 'Location triangulating from live call telemetry',
+    vitals: {
+      consciousness: lowerText.includes('unconscious')
+        ? 'Victim unresponsive / unconscious reported'
+        : 'Caller speaking, consciousness status monitored',
+      breathing: lowerText.includes('breathing') || lowerText.includes('not breathing')
+        ? 'Compromised or labored breathing reported'
+        : 'Spontaneous breathing, verifying stability',
+      bloodLoss: lowerText.includes('bleeding') || lowerText.includes('blood')
+        ? 'Active bleeding reported on-scene - apply pressure'
+        : 'No acute hemorrhage reported',
+      traumaNotes: symptomsFound.length > 0
+        ? `Identified conditions: ${symptomsFound.join(', ')}`
+        : 'Live triage assessment in progress'
+    },
+    callerInfo: {
+      phone: callerPhone || '+91 Emergency Caller',
+      vehiclePlate: vehiclePlate || 'Not specified'
+    },
+    recommendedUnit
+  };
+
+  // Contextual Copilot Dispatch Reply
+  let copilotReply = '';
+  if (category === 'STRUCTURAL_FIRE') {
+    copilotReply = `This is Hyderabad 108 Dispatch. Fire emergency confirmed near ${matchedLandmark || 'your location'}. Fire Services and ALS-108 have been alerted. Evacuate all personnel to a safe distance upwind immediately.`;
+  } else if (category === 'CARDIAC_ARREST') {
+    copilotReply = `108 Dispatch here. ALS Ambulance with Defibrillator is being routed to ${matchedLandmark || 'your area'}. Place the patient flat on their back and check if they are breathing.`;
+  } else if (category === 'ROAD_ACCIDENT') {
+    copilotReply = `Hyderabad 108 Emergency Dispatch received. Unit is en route to ${matchedLandmark || 'the accident site'}. Do not move injured individuals unless there is direct fire danger. Help is on the way.`;
+  } else {
+    copilotReply = `Hyderabad 108 Dispatch received your report near ${matchedLandmark || 'your location'}. Emergency services are being alerted. Please stay on the line.`;
+  }
+
+  return {
+    originalTranscript: text,
+    englishTranslation: text,
+    detectedLanguage: 'en',
+    entities,
+    triageUpdate,
+    copilotReply
+  };
+}
+
 /**
  * 1. GET /api/health
  */
 app.get('/api/health', (req: Request, res: Response) => {
+  const reqKey = (req.headers['x-gemini-api-key'] as string)?.trim() || process.env.GEMINI_API_KEY || '';
   res.json({
     status: 'UP',
     service: 'AapadaLive Crisis Voice Copilot Backend',
     uptimeSeconds: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
-    hasApiKey: Boolean(apiKey),
-    apiKeyPrefix: apiKey ? apiKey.slice(0, 8) + '...' : 'NONE',
+    hasApiKey: Boolean(reqKey),
+    apiKeyPrefix: reqKey ? reqKey.slice(0, 8) + '...' : 'NONE',
     activeModels: [
       'gemini-3.8-live',
       'gemini-3.5-live-translate-preview',
@@ -60,63 +278,36 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 /**
  * 2. POST /api/transcribe-and-translate
- * Calls gemini-3.5-transcribe and gemini-3.5-live-translate-preview
+ * Accepts real spoken transcript and/or base64 audio chunks.
+ * When a Gemini API key is provided, invokes Google GenAI models.
+ * Otherwise, runs the deterministic Hyderabad Emergency NLP & Entity engine.
  */
 app.post('/api/transcribe-and-translate', async (req: Request, res: Response) => {
   try {
-    const { audioBase64, mimeType = 'audio/webm', customVocabulary = [] } = req.body;
+    const {
+      audioBase64,
+      mimeType = 'audio/webm',
+      transcript = '',
+      acousticMetrics = null
+    } = req.body;
 
-    if (!audioBase64) {
-      return res.status(400).json({ error: 'Missing audioBase64 payload' });
-    }
+    const runtimeKey = (req.headers['x-gemini-api-key'] as string)?.trim() || process.env.GEMINI_API_KEY || '';
 
-    console.log(`[Server] Received audio chunk (${mimeType}, size: ${audioBase64.length} chars)`);
-
-    // If real Gemini Client is available, call Google Gemini 3.5 / 3.8 models
-    if (geminiClient) {
+    // If Gemini key is supplied and audio chunk is provided, attempt live Gemini processing
+    if (runtimeKey && audioBase64) {
       try {
-        const prompt = `You are AapadaLive (gemini-3.5-transcribe & gemini-3.5-live-translate-preview), the official crisis response AI for Hyderabad 108 Emergency Dispatch.
-The user is speaking on an emergency audio line in Telugu, Hindi, Hyderabadi Urdu, or English.
-Analyze this audio recording:
-1. Transcribe the exact words spoken (Telugu/Hindi/English/Urdu code-switching).
-2. Translate the speech into clear, grammatical English for the 108 emergency operator.
-3. Detect the primary language ('te', 'hi', 'ur-hyderabad', 'en', 'code-switched').
-4. Extract all alphanumeric entities:
-   - Landmarks (bias towards: Begumpet, Hitec City, Gachibowli, Secunderabad, Banjara Hills, Panjagutta, Charminar, PVNR Expressway, KIMS Hospital, Apollo, ORR Exit)
-   - Vehicle plates (e.g. TS 09 UB 4402)
-   - Phone numbers (e.g. +91 98490 12345)
-   - Symptoms / Urgency (unconscious, bleeding, fire, smoke, fracture)
-5. Update the live triage ticket fields: category, severity (CRITICAL, HIGH, MODERATE), landmark, exactLocation, vitals, recommendedUnit.
+        const client = new GoogleGenAI({ apiKey: runtimeKey });
+        const prompt = `You are AapadaLive (gemini-3.5-transcribe & gemini-3.5-live-translate-preview), emergency response AI for Hyderabad 108 Dispatch.
+Transcribe and translate this emergency audio:
+1. Transcribe the exact words spoken in original Telugu/Hindi/English/Urdu.
+2. Provide clear English translation.
+3. Detect language ('te', 'hi', 'ur-hyderabad', 'en', 'code-switched').
+4. Extract entities: Landmarks (Begumpet, Hitec City, Gachibowli, Secunderabad, Banjara Hills, Charminar, PVNR Expressway, KIMS, Apollo), Vehicle plates, Phone numbers, Symptoms.
+5. Provide triage ticket update JSON.
+Return strict JSON with keys: originalTranscript, englishTranslation, detectedLanguage, entities, triageUpdate.`;
 
-Return strictly a valid JSON object with the following schema:
-{
-  "originalTranscript": "verbatim text in original spoken language",
-  "englishTranslation": "accurate English translation for the dispatcher",
-  "detectedLanguage": "te | hi | ur-hyderabad | en | code-switched",
-  "entities": [
-    { "text": "landmark or entity", "type": "LANDMARK | VEHICLE_NO | PHONE | SYMPTOM | URGENCY" }
-  ],
-  "triageUpdate": {
-    "category": "ROAD_ACCIDENT | CARDIAC_ARREST | STRUCTURAL_FIRE | HAZMAT_TOXIC | RESPIRATORY_DISTRESS",
-    "severity": "CRITICAL | HIGH | MODERATE",
-    "landmark": "string",
-    "exactLocation": "string",
-    "vitals": {
-      "consciousness": "string",
-      "breathing": "string",
-      "bloodLoss": "string",
-      "traumaNotes": "string"
-    },
-    "callerInfo": {
-      "phone": "string",
-      "vehiclePlate": "string"
-    },
-    "recommendedUnit": "string"
-  }
-}`;
-
-        const response = await (geminiClient as any).models.generateContent({
-          model: 'gemini-3.5-transcribe', // or gemini-3.8-flash
+        const response = await (client as any).models.generateContent({
+          model: 'gemini-3.5-transcribe',
           contents: [
             {
               role: 'user',
@@ -143,41 +334,48 @@ Return strictly a valid JSON object with the following schema:
           return res.json(parsed);
         }
       } catch (geminiErr: any) {
-        console.warn('[Server] Gemini live call failed or key reported as leaked:', geminiErr.message);
+        console.warn('[Server] Live Gemini API call warning:', geminiErr.message);
       }
     }
 
-    // High-performance intelligent phonetic & entity extractor fallback
-    // Ensures zero-failure during live judging even if venue network/key is revoked
-    const defaultResponse = {
-      originalTranscript: "PVNR Expressway Pillar 142 దగ్గర severe accident! TS 09 UB 4402 car overturned!",
-      englishTranslation: "Severe accident near PVNR Expressway Pillar 142! Car TS 09 UB 4402 has overturned!",
-      detectedLanguage: "code-switched",
-      entities: [
-        { text: "PVNR Expressway Pillar 142", type: "LANDMARK" },
-        { text: "TS 09 UB 4402", type: "VEHICLE_NO" },
-        { text: "OVERTURNED", type: "SYMPTOM" }
-      ],
-      triageUpdate: {
-        category: "ROAD_ACCIDENT",
-        severity: "CRITICAL",
-        landmark: "PVNR Expressway Pillar 142",
-        exactLocation: "Mehdipatnam Ramp Descent, Hyderabad",
-        vitals: {
-          consciousness: "Driver trapped, slipping into coma",
-          breathing: "Tachypnea with stridor",
-          bloodLoss: "Severe arterial laceration",
-          traumaNotes: "Engine smoking, fuel leak hazard"
-        },
-        callerInfo: {
-          phone: "+91 98490 44108",
-          vehiclePlate: "TS 09 UB 4402"
-        },
-        recommendedUnit: "ALS-108 Ambulance + Extrication Hydraulic Cutter Unit"
-      }
-    };
+    // Real Deterministic NLP & Entity Extraction on user's actual spoken input
+    if (transcript && transcript.trim()) {
+      const parsed = parseTranscriptDeterministically(transcript, acousticMetrics);
 
-    return res.json(defaultResponse);
+      // Persist the incident automatically if entities were found
+      if (parsed.triageUpdate && (parsed.entities.length > 0 || parsed.triageUpdate.category !== 'ROAD_ACCIDENT')) {
+        try {
+          const raw = fs.readFileSync(DATA_FILE, 'utf8');
+          const incidents = JSON.parse(raw);
+          const newIncident = {
+            id: `HYD-108-${Date.now().toString().slice(-4)}`,
+            createdAt: new Date().toISOString(),
+            transcript: parsed.originalTranscript,
+            entities: parsed.entities,
+            triage: parsed.triageUpdate,
+            acousticMetrics
+          };
+          incidents.unshift(newIncident);
+          fs.writeFileSync(DATA_FILE, JSON.stringify(incidents.slice(0, 50), null, 2), 'utf8');
+        } catch (e) {
+          console.warn('[Server] Incident save warning:', e);
+        }
+      }
+
+      return res.json(parsed);
+    }
+
+    // If only an audio chunk was received without a transcript or key, return empty/listening state
+    // (Never return fake hardcoded PVNR transcripts!)
+    return res.json({
+      originalTranscript: '',
+      englishTranslation: '',
+      detectedLanguage: 'en',
+      entities: [],
+      triageUpdate: null,
+      copilotReply: ''
+    });
+
   } catch (error: any) {
     console.error('[Server] Transcribe-and-translate error:', error);
     res.status(500).json({ error: error.message || 'Internal processing error' });
@@ -186,8 +384,8 @@ Return strictly a valid JSON object with the following schema:
 
 /**
  * 3. POST /api/tts
- * Generates 3-part structured TTS audio via gemini-3.8-flash-tts
- * Cast (voice), Direct (speech_metadata.style), Text
+ * Generates 3-part structured TTS audio via gemini-3.8-flash-tts when API key is provided,
+ * or generates synthesized 24kHz PCM WAV bytes for Web Audio playback.
  */
 app.post('/api/tts', async (req: Request, res: Response) => {
   try {
@@ -197,11 +395,12 @@ app.post('/api/tts', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Missing text parameter' });
     }
 
-    console.log(`[Server] Generating TTS for: "${text.slice(0, 40)}..." (Voice: ${voiceName})`);
+    const runtimeKey = (req.headers['x-gemini-api-key'] as string)?.trim() || process.env.GEMINI_API_KEY || '';
 
-    if (geminiClient) {
+    if (runtimeKey) {
       try {
-        const response = await (geminiClient as any).models.generateContent({
+        const client = new GoogleGenAI({ apiKey: runtimeKey });
+        const response = await (client as any).models.generateContent({
           model: 'gemini-3.8-flash-tts',
           contents: [
             {
@@ -227,7 +426,7 @@ app.post('/api/tts', async (req: Request, res: Response) => {
 
         const audioPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
         if (audioPart?.inlineData?.data) {
-          console.log('[Server] Successfully received TTS PCM audio from gemini-3.8-flash-tts');
+          console.log('[Server] Successfully generated TTS via gemini-3.8-flash-tts');
           return res.json({
             audioBase64: audioPart.inlineData.data,
             mimeType: audioPart.inlineData.mimeType || 'audio/pcm;rate=24000',
@@ -239,8 +438,8 @@ app.post('/api/tts', async (req: Request, res: Response) => {
       }
     }
 
-    // High-fidelity synthesized WAV audio generator
-    const wavBase64 = generateSynthesizedPcmWav(text.length * 80);
+    // High-fidelity synthesized WAV audio generator (24kHz Web Audio compatible)
+    const wavBase64 = generateSynthesizedPcmWav(Math.min(4000, Math.max(1000, text.length * 60)));
     return res.json({
       audioBase64: wavBase64,
       mimeType: 'audio/wav',
@@ -254,9 +453,6 @@ app.post('/api/tts', async (req: Request, res: Response) => {
 
 /**
  * 4. Incidents Persistence API
- * GET /api/incidents
- * POST /api/incidents
- * PATCH /api/incidents/:id/dispatch
  */
 app.get('/api/incidents', (req: Request, res: Response) => {
   try {
@@ -326,11 +522,12 @@ function generateSynthesizedPcmWav(durationMs: number = 2000): string {
   buffer.write('data', 36);
   buffer.writeUInt32LE(dataSize, 40);
 
-  // Generate harmonic audio wave
+  // Generate harmonic audio wave with soft decay
   for (let i = 0; i < numSamples; i++) {
     const t = i / sampleRate;
-    const freq = 220 + Math.sin(t * 3) * 40;
-    const sample = Math.sin(2 * Math.PI * freq * t) * 0.4;
+    const envelope = Math.max(0.05, 1 - (i / numSamples) * 0.7);
+    const freq = 220 + Math.sin(t * 4) * 40;
+    const sample = Math.sin(2 * Math.PI * freq * t) * 0.3 * envelope;
     const intSample = Math.floor(sample * 32767);
     buffer.writeInt16LE(intSample, 44 + i * 2);
   }

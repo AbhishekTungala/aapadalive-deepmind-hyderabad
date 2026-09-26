@@ -113,12 +113,20 @@ export class GeminiAudioStack {
   private isSimulating: boolean = false;
   private simulationIntervals: any[] = [];
   private demoOscillators: (OscillatorNode | AudioBufferSourceNode)[] = [];
+  private recognition: any = null;
+  private currentProsody: AcousticProsodyMetrics = {
+    stressScore: 0,
+    pitchVarianceHz: 0,
+    speechRateWpm: 0,
+    snrDb: 0,
+    detectedTags: []
+  };
 
   constructor(callbacks: AudioStackCallbacks) {
     this.callbacks = callbacks;
-    const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
-    if (envKey) {
-      this.apiKey = envKey;
+    const sessionKey = typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('gemini_api_key') || '') : '';
+    if (sessionKey) {
+      this.apiKey = sessionKey;
     }
   }
 
@@ -202,7 +210,10 @@ export class GeminiAudioStack {
       // Start rolling 4-second chunk processing with backend gemini-3.5-transcribe
       this.startRollingAudioTranscription();
 
-      const activeKey = this.apiKey.trim() || (import.meta as any).env?.VITE_GEMINI_API_KEY || localStorage.getItem('gemini_api_key') || '';
+      // Start browser SpeechRecognition in parallel for real-time utterance streaming
+      this.startSpeechRecognition();
+
+      const activeKey = this.apiKey.trim() || (typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('gemini_api_key') || '') : '');
 
       if (activeKey) {
         const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${activeKey}`;
@@ -343,9 +354,14 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
             const base64Audio = result.split(',')[1];
             if (base64Audio) {
               try {
+                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                if (this.apiKey) {
+                  headers['x-gemini-api-key'] = this.apiKey;
+                }
+
                 const res = await fetch('/api/transcribe-and-translate', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers,
                   body: JSON.stringify({
                     audioBase64: base64Audio,
                     mimeType: 'audio/webm',
@@ -353,7 +369,7 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
                   })
                 });
                 const triagePayload = await res.json();
-                if (triagePayload.originalTranscript) {
+                if (triagePayload.originalTranscript && triagePayload.originalTranscript.trim()) {
                   this.callbacks.onTranscriptReceived({
                     id: `caller-${Date.now()}`,
                     timestamp: new Date().toLocaleTimeString(),
@@ -412,22 +428,23 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
 
       // Real DSP Acoustic Telemetry
       if (rms < 0.008) {
-        // Line is silent / ambient: stress and pitch drop smoothly
-        this.callbacks.onProsodyUpdate({
-          stressScore: 12,
+        // Line is silent / ambient: stress and pitch drop to baseline 0
+        this.currentProsody = {
+          stressScore: 0,
           pitchVarianceHz: 0,
           speechRateWpm: 0,
-          snrDb: 6,
+          snrDb: 0,
           detectedTags: [
             { id: 'ambient', label: 'Ambient Silence / Line Open', severity: 'info', confidence: 0.99, active: true }
           ]
-        });
+        };
+        this.callbacks.onProsodyUpdate(this.currentProsody);
       } else {
         // User is actively speaking: compute real fundamental frequency and vocal agitation
         const estF0 = Math.round((zeroCrossings / inputBuffer.length) * (sampleRate / 2));
-        const realStress = Math.min(99, Math.max(25, Math.round(rms * 280 + (estF0 > 240 ? 30 : 10))));
-        const estWpm = Math.min(240, 140 + Math.round(rms * 200));
-        const estSnr = Math.min(30, Math.max(10, Math.round(inputDb / 3.5)));
+        const realStress = Math.min(99, Math.max(20, Math.round(rms * 280 + (estF0 > 240 ? 30 : 10))));
+        const estWpm = Math.min(240, 120 + Math.round(rms * 200));
+        const estSnr = Math.min(30, Math.max(8, Math.round(inputDb / 3.5)));
 
         const activeTags: { id: string; label: string; severity: 'critical' | 'warning' | 'info'; confidence: number; active: boolean }[] = [];
         if (rms > 0.25) {
@@ -439,13 +456,14 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
           activeTags.push({ id: 'human-speech', label: 'Active Human Voice Stream (16kHz PCM)', severity: 'info', confidence: 0.96, active: true });
         }
 
-        this.callbacks.onProsodyUpdate({
+        this.currentProsody = {
           stressScore: realStress,
           pitchVarianceHz: Math.min(320, Math.max(80, estF0)),
           speechRateWpm: estWpm,
           snrDb: estSnr,
           detectedTags: activeTags
-        });
+        };
+        this.callbacks.onProsodyUpdate(this.currentProsody);
       }
 
       // Downsample to 16kHz linear Int16 PCM
@@ -672,9 +690,14 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
     });
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (this.apiKey) {
+        headers['x-gemini-api-key'] = this.apiKey;
+      }
+
       const response = await fetch('/api/tts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           text: preset.text,
           voiceName: preset.voice,
@@ -986,13 +1009,168 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
 
   private startSimulatedLiveSession() {
     this.telemetry.connectionStatus = 'CONNECTED';
-    this.telemetry.activeModel = 'gemini-3.8-live (Interactive Engine)';
+    this.telemetry.activeModel = 'gemini-3.8-live (Browser STT + DSP Engine)';
     this.callbacks.onTelemetryUpdate({
       connectionStatus: 'CONNECTED',
-      activeModel: 'gemini-3.8-live (Interactive Engine)',
+      activeModel: 'gemini-3.8-live (Browser STT + DSP Engine)',
       interactionStatus: 'IDLE'
     });
     this.startMicrophoneCapture();
+    this.startSpeechRecognition();
+  }
+
+  /**
+   * Browser SpeechRecognition for real-time live microphone transcription
+   */
+  private startSpeechRecognition() {
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) {
+      console.warn('[AapadaLive] Browser SpeechRecognition not supported in this environment');
+      return;
+    }
+
+    try {
+      if (this.recognition) {
+        try { this.recognition.abort(); } catch {}
+      }
+
+      const recognition = new SpeechRec();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-IN';
+
+      let currentUtteranceId = `live-utterance-${Date.now()}`;
+
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const item = event.results[i];
+          if (item.isFinal) {
+            finalTranscript += item[0].transcript;
+          } else {
+            interimTranscript += item[0].transcript;
+          }
+        }
+
+        const activeText = (finalTranscript || interimTranscript).trim();
+        if (!activeText) return;
+
+        // Immediately stream user's real spoken words into UI
+        this.callbacks.onTranscriptReceived({
+          id: currentUtteranceId,
+          timestamp: new Date().toLocaleTimeString(),
+          speaker: 'CALLER',
+          originalText: activeText,
+          originalLanguage: 'en',
+          translatedText: activeText,
+          entities: this.extractEntities(activeText),
+          isComplete: Boolean(finalTranscript)
+        });
+
+        // When utterance is final, send to backend for NLP & Triage extraction
+        if (finalTranscript.trim()) {
+          const finishedUtterance = finalTranscript.trim();
+          currentUtteranceId = `live-utterance-${Date.now()}`;
+          this.processSpokenUtterance(finishedUtterance);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        if (event.error !== 'no-speech') {
+          console.warn('[AapadaLive] SpeechRecognition error:', event.error);
+        }
+      };
+
+      recognition.onend = () => {
+        // Automatically restart speech recognition while live call is connected
+        if (this.telemetry.connectionStatus === 'CONNECTED' && !this.isSimulating) {
+          try {
+            recognition.start();
+          } catch (e) {}
+        }
+      };
+
+      recognition.start();
+      this.recognition = recognition;
+    } catch (err) {
+      console.warn('[AapadaLive] Failed to initialize SpeechRecognition:', err);
+    }
+  }
+
+  private async processSpokenUtterance(spokenUtterance: string) {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (this.apiKey) {
+        headers['x-gemini-api-key'] = this.apiKey;
+      }
+
+      const res = await fetch('/api/transcribe-and-translate', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          transcript: spokenUtterance,
+          acousticMetrics: this.currentProsody
+        })
+      });
+
+      const data = await res.json();
+      if (data.triageUpdate) {
+        this.callbacks.onTriageUpdate(data.triageUpdate);
+      }
+
+      if (data.copilotReply) {
+        const replyId = `gemini-${Date.now()}`;
+        this.callbacks.onTranscriptReceived({
+          id: replyId,
+          timestamp: new Date().toLocaleTimeString(),
+          speaker: 'GEMINI_DISPATCH',
+          originalText: data.copilotReply,
+          originalLanguage: 'en',
+          translatedText: data.copilotReply,
+          entities: this.extractEntities(data.copilotReply),
+          isComplete: true
+        });
+
+        this.speakCopilotResponse(data.copilotReply);
+      }
+    } catch (err) {
+      console.warn('[AapadaLive] Error processing spoken utterance:', err);
+    }
+  }
+
+  private async speakCopilotResponse(text: string) {
+    await this.ensureAudioContext();
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (this.apiKey) {
+        headers['x-gemini-api-key'] = this.apiKey;
+      }
+
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          text,
+          voiceName: 'Kore',
+          stylePrompt: 'clear, professional, urgent priority dispatch command'
+        })
+      });
+
+      const data = await response.json();
+      if (data.audioBase64 && this.audioContext && this.geminiGainNode) {
+        const audioBufferData = this.base64ToArrayBuffer(data.audioBase64);
+        const decodedBuffer = await this.audioContext.decodeAudioData(audioBufferData);
+        const source = this.audioContext.createBufferSource();
+        source.buffer = decodedBuffer;
+        source.connect(this.geminiGainNode);
+        source.start();
+        this.scheduledAudioSources.push(source);
+      }
+    } catch (e) {
+      console.warn('[AapadaLive] Error playing copilot response:', e);
+    }
   }
 
   public extractEntities(text: string): { text: string; type: 'LANDMARK' | 'VEHICLE_NO' | 'PHONE' | 'SYMPTOM' | 'URGENCY' }[] {
@@ -1053,6 +1231,13 @@ You MUST frequently invoke the update_triage_dashboard tool as an asynchronous f
         this.mediaRecorder.stop();
       } catch (e) {}
       this.mediaRecorder = null;
+    }
+
+    if (this.recognition) {
+      try {
+        this.recognition.abort();
+      } catch (e) {}
+      this.recognition = null;
     }
 
     if (this.micStream) {

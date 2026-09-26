@@ -320,23 +320,19 @@ export const Header: React.FC<HeaderProps> = ({
               Google Gemini API Configuration
             </h3>
             <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-              Enter your Gemini API Key to enable live WebSocket connectivity to <code className="text-cyan-300">gemini-3.8-live</code>. Key is stored locally in your browser's <code className="text-slate-300">localStorage</code> and falls back to <code className="text-slate-300">.env</code>.
+              Enter your Gemini API Key to enable live WebSocket connectivity to <code className="text-cyan-300">gemini-3.8-live</code>. Key is stored securely in your browser's <code className="text-cyan-300">sessionStorage</code> for this session only and passed via the <code className="text-cyan-300">x-gemini-api-key</code> request header.
             </p>
             <input
               type="password"
-              placeholder="AIzaSy..."
+              placeholder="Paste Gemini API Key..."
               value={tempKey}
               onChange={(e) => setTempKey(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs font-mono mb-3 focus:outline-none focus:border-cyan-500"
             />
             <div className="flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => setTempKey('AIzaSyBViF11iVXYKyfa9jrT5gUFNVsAKqkI25w')}
-                className="text-[11px] text-cyan-400 hover:text-cyan-300 underline underline-offset-2 cursor-pointer"
-              >
-                Insert Hackathon Key
-              </button>
+              <span className="text-[11px] text-slate-500">
+                Leaves no trace in source code or dist bundle
+              </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowKeyModal(false)}
