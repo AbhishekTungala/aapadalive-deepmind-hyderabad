@@ -12,13 +12,15 @@ interface ProsodyZoneProps {
   callerAudioData: Uint8Array;
   geminiAudioData: Uint8Array;
   bargeInCount?: number;
+  isConnected?: boolean;
 }
 
 export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
   prosody,
   callerAudioData,
   geminiAudioData,
-  bargeInCount = 0
+  bargeInCount = 0,
+  isConnected = false
 }) => {
   const callerCanvasRef = useRef<HTMLCanvasElement>(null);
   const geminiCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -181,16 +183,20 @@ export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
     return 'RESTING BASELINE';
   };
 
-  const clarityVal = prosody.acousticClarity ?? 94;
-  const confidenceVal = prosody.voiceConfidence ?? 88;
+  const clarityVal = isConnected
+    ? (prosody.acousticClarity ?? Math.min(99, Math.max(35, 65 + Math.round(prosody.snrDb * 1.2))))
+    : 0;
+  const confidenceVal = isConnected
+    ? (prosody.voiceConfidence ?? Math.min(98, Math.max(40, 60 + Math.round(prosody.snrDb * 1.1))))
+    : 0;
   const peakDbVal = prosody.peakDb ?? (callerAudioData[0] ? Math.round((callerAudioData[0] / 255) * 80) : 0);
   const f0Val = prosody.f0Hz ?? prosody.pitchVarianceHz;
-  const jitterVal = prosody.jitterPercent ?? (stressPercent > 50 ? 4.2 : 1.4);
+  const jitterVal = prosody.jitterPercent ?? (stressPercent > 50 ? 4.2 : (isConnected ? 1.4 : 0));
 
   return (
     <div className="h-full flex flex-col gap-3.5">
       {/* ========================================================================= */}
-      {/* CARD 1: Vocal Stress & Unit Status (Reference Bento Cockpit)             */}
+      {/* CARD 1: Vocal Tone & Prosody Telemetry (Gemini 3.8 Live)                  */}
       {/* ========================================================================= */}
       <div className="p-4 rounded-xl bg-[#111e2e]/90 backdrop-blur-2xl border border-[#1e3a5f]/70 shadow-[0_8px_32px_0_rgba(10,19,31,0.6)] flex flex-col gap-3">
         {/* Card Header */}
@@ -198,7 +204,7 @@ export const ProsodyZone: React.FC<ProsodyZoneProps> = ({
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-cyan-400" />
             <span className="text-xs font-mono font-bold text-white tracking-wide uppercase">
-              Vocal Stress & Unit Status
+              VOCAL TONE & PROSODY TELEMETRY (GEMINI 3.8 LIVE)
             </span>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold tracking-wider ${

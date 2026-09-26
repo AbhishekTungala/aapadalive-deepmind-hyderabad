@@ -51,8 +51,8 @@ const STANDBY_PROSODY: AcousticProsodyMetrics = {
   peakDb: 0,
   f0Hz: 0,
   jitterPercent: 0,
-  acousticClarity: 95,
-  voiceConfidence: 85,
+  acousticClarity: 0,
+  voiceConfidence: 0,
   detectedTags: [
     { id: 'standby', label: 'System Standby / Line Ready', severity: 'info', confidence: 1.0, active: true }
   ]
@@ -386,6 +386,7 @@ export function App() {
             callerAudioData={callerAudioData}
             geminiAudioData={geminiAudioData}
             bargeInCount={telemetry.bargeInCount}
+            isConnected={telemetry.connectionStatus === 'CONNECTED'}
           />
         </section>
 
@@ -472,27 +473,45 @@ export function App() {
           </div>
 
           {/* Bottom Right: Two Glowing Progress Bars */}
-          <div className="col-span-12 md:col-span-3 flex flex-col gap-1.5 font-mono">
-            <div>
-              <div className="flex justify-between text-[9px] text-slate-400 mb-0.5">
-                <span>Voice Recognition Confidence</span>
-                <span className="text-cyan-300 font-bold">96.4%</span>
-              </div>
-              <div className="h-1.5 w-full bg-[#0a131f] rounded-full overflow-hidden border border-[#1e3a5f]/40">
-                <div className="h-full bg-gradient-to-r from-cyan-500 to-teal-400 w-[96.4%] shadow-[0_0_6px_#06b6d4]" />
-              </div>
-            </div>
+          {(() => {
+            const isCallActive = telemetry.connectionStatus === 'CONNECTED';
+            const voiceConfidenceVal = isCallActive
+              ? Math.min(99, Math.max(45, 70 + Math.round(prosody.snrDb * 1.2)))
+              : 0;
+            const translationFidelityVal = isCallActive
+              ? Math.min(99, Math.max(50, 75 + Math.round(prosody.snrDb * 1.0)))
+              : 0;
 
-            <div>
-              <div className="flex justify-between text-[9px] text-slate-400 mb-0.5">
-                <span>Hospital Access Continuity</span>
-                <span className="text-emerald-300 font-bold">99.1%</span>
+            return (
+              <div className="col-span-12 md:col-span-3 flex flex-col gap-1.5 font-mono">
+                <div>
+                  <div className="flex justify-between text-[9px] text-slate-400 mb-0.5">
+                    <span>Voice Recognition Confidence</span>
+                    <span className="text-cyan-300 font-bold">{voiceConfidenceVal}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-[#0a131f] rounded-full overflow-hidden border border-[#1e3a5f]/40">
+                    <div
+                      className="h-full bg-gradient-to-r from-cyan-500 to-teal-400 transition-all duration-300 shadow-[0_0_6px_#06b6d4]"
+                      style={{ width: `${voiceConfidenceVal}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[9px] text-slate-400 mb-0.5">
+                    <span>Bilingual Translation Fidelity</span>
+                    <span className="text-emerald-300 font-bold">{translationFidelityVal}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-[#0a131f] rounded-full overflow-hidden border border-[#1e3a5f]/40">
+                    <div
+                      className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 transition-all duration-300 shadow-[0_0_6px_#10b981]"
+                      style={{ width: `${translationFidelityVal}%` }}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="h-1.5 w-full bg-[#0a131f] rounded-full overflow-hidden border border-[#1e3a5f]/40">
-                <div className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 w-[99.1%] shadow-[0_0_6px_#10b981]" />
-              </div>
-            </div>
-          </div>
+            );
+          })()}
         </div>
       </footer>
     </div>

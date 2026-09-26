@@ -27,11 +27,16 @@ export const TriageZone: React.FC<TriageZoneProps> = ({
   ticket,
   prosody,
   telemetry,
-  detectedLanguage = 'Telugu + English (Code-Switched)',
+  detectedLanguage,
   onDispatchTicket,
   onTriggerTTS,
 }) => {
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
+
+  const isStandby = telemetry.connectionStatus !== 'CONNECTED' || ticket.category === 'AWAITING_STREAM' || ticket.categoryLabel.includes('Awaiting');
+  const activeLanguage = isStandby
+    ? 'Awaiting Voice Stream...'
+    : (detectedLanguage || 'Telugu + English (Code-Switched)');
 
   // Compute Vocal Emotion & Tone from real-time mic prosody
   const getVocalEmotion = () => {
@@ -122,7 +127,7 @@ export const TriageZone: React.FC<TriageZoneProps> = ({
               Detected Language & Code-Switching
             </span>
             <div className="text-xs font-bold text-teal-300">
-              {detectedLanguage}
+              {activeLanguage}
             </div>
           </div>
 

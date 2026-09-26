@@ -139,17 +139,16 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Reference Dashboard Status Pills & Start/End Live Call CTA */}
         <div className="flex items-center gap-2.5">
-          {/* Live Grid Status Pill */}
+          {/* Gemini 3.8 Live Ready Status Pill */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111e2e] border border-[#1e3a5f] text-xs font-mono">
             <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse shadow-[0_0_8px_#10b981]" />
-            <span className="text-emerald-300 font-bold">Live Grid</span>
+            <span className="text-emerald-300 font-bold">Gemini 3.8 Live: Ready</span>
           </div>
 
-          {/* ALS Units Ready Pill */}
+          {/* Full-Duplex Bidi Audio Pill */}
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111e2e] border border-[#1e3a5f] text-xs font-mono text-cyan-300">
             <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="font-semibold text-slate-300">ALS Units:</span>
-            <span className="font-bold text-cyan-300">Ready</span>
+            <span className="font-bold text-cyan-300">Full-Duplex Bidi Audio</span>
           </div>
 
           {/* Mic 16kHz Active Pill */}
