@@ -12,81 +12,53 @@ import type {
   TTSPreset
 } from './types';
 
-const INITIAL_TRIAGE_TICKET: TriageTicket = {
-  ticketId: 'HYD-108-INIT',
-  timestamp: new Date().toLocaleTimeString(),
+// Standby Initial State: Completely clean without any pre-loaded mock incidents
+const STANDBY_TRIAGE_TICKET: TriageTicket = {
+  ticketId: 'STANDBY-108',
+  timestamp: '--:--:--',
   category: 'ROAD_ACCIDENT',
-  categoryLabel: 'Road Traffic Accident',
-  severity: 'CRITICAL',
-  landmark: 'PVNR Expressway (Pillar 142)',
-  exactLocation: 'Mehdipatnam Ramp Descent, Hyderabad',
+  categoryLabel: 'System Standby',
+  severity: 'MODERATE',
+  landmark: 'Awaiting Incoming Call...',
+  exactLocation: 'Telangana 108 Emergency Dispatch Network',
   extractedVitals: {
-    consciousness: '2 victims unconscious, 1 driver trapped',
-    breathing: 'Irregular, agonal gasping observed',
-    pulseStatus: 'Rapid, thready',
-    bloodLoss: 'Severe arterial laceration from shattered windshield',
-    traumaNotes: 'Vehicle overturned on median, fuel leak suspected'
+    consciousness: 'System on standby',
+    breathing: 'Acoustic prosody idle',
+    pulseStatus: 'Ready',
+    bloodLoss: 'None',
+    traumaNotes: 'No active incident. Ready for incoming dispatch.'
   },
   callerIdentity: {
-    phone: '+91 98490 44108',
-    vehiclePlate: 'TS 09 UB 4402'
+    phone: 'Line Ready',
+    vehiclePlate: 'Scanning...'
   },
   recommendedUnit: {
-    unitType: 'ALS-108 Ambulance + Extrication Hydraulic Cutter Unit',
-    unitId: '108-HYD-42',
-    etaMinutes: 3,
-    specialEquipment: ['Jaws of Life Cutter', 'Cervical Collars', 'High-Flow O2']
+    unitType: '108 Fleet Standby',
+    unitId: 'Available',
+    etaMinutes: 0,
+    specialEquipment: ['Telemetry Stream', 'Automated Triage', 'Bilingual Bridge']
   },
   dispatchStatus: 'PENDING_APPROVAL',
-  lastUpdated: new Date().toLocaleTimeString()
+  lastUpdated: '--:--:--'
 };
 
-const INITIAL_PROSODY: AcousticProsodyMetrics = {
-  stressScore: 88,
-  pitchVarianceHz: 182,
-  speechRateWpm: 210,
-  snrDb: 15,
+const STANDBY_PROSODY: AcousticProsodyMetrics = {
+  stressScore: 0,
+  pitchVarianceHz: 0,
+  speechRateWpm: 0,
+  snrDb: 0,
   detectedTags: [
-    { id: 'panic', label: 'Acute Panic / Hyperventilation', severity: 'critical', confidence: 0.95, active: true },
-    { id: 'horns', label: 'Background Traffic & Heavy Horns', severity: 'warning', confidence: 0.89, active: true },
-    { id: 'multispeaker', label: 'Multiple Overlapping Bystander Voices', severity: 'warning', confidence: 0.82, active: true }
+    { id: 'standby', label: 'System Standby / Line Ready', severity: 'info', confidence: 1.0, active: true }
   ]
 };
 
-const INITIAL_TRANSCRIPTS: TranscriptEntry[] = [
-  {
-    id: 'intro-1',
-    timestamp: '11:38:02',
-    speaker: 'CALLER',
-    originalText: 'హలో 108?! Please come fast! PVNR Expressway Pillar 142 దగ్గర severe accident అయింది! TS 09 UB 4402 car overturned!',
-    originalLanguage: 'code-switched',
-    translatedText: 'Hello 108?! Please come fast! Near PVNR Expressway Pillar 142, a severe accident occurred! Car TS 09 UB 4402 overturned!',
-    entities: [
-      { text: 'PVNR Expressway', type: 'LANDMARK' },
-      { text: 'TS 09 UB 4402', type: 'VEHICLE_NO' },
-      { text: 'BLEEDING', type: 'SYMPTOM' }
-    ],
-    isComplete: true
-  },
-  {
-    id: 'intro-2',
-    timestamp: '11:38:05',
-    speaker: 'GEMINI_DISPATCH',
-    originalText: 'This is Hyderabad 108 Dispatch. Advanced Life Support Unit 42 has been dispatched to PVNR Pillar 142. Do not attempt to move the trapped driver if spine injury is suspected. Keep the airway open and clear bystanders—',
-    originalLanguage: 'en',
-    translatedText: 'This is Hyderabad 108 Dispatch. Advanced Life Support Unit 42 has been dispatched to PVNR Pillar 142. Do not attempt to move the trapped driver if spine injury is suspected. Keep the airway open and clear bystanders—',
-    entities: [
-      { text: 'PVNR Expressway', type: 'LANDMARK' }
-    ],
-    isComplete: true
-  }
-];
+const STANDBY_TRANSCRIPTS: TranscriptEntry[] = [];
 
 export function App() {
   const [telemetry, setTelemetry] = useState<SystemTelemetry>({
     connectionStatus: 'DISCONNECTED',
     interactionStatus: 'IDLE',
-    latencyMs: 38,
+    latencyMs: 24,
     activeModel: 'gemini-3.8-live',
     bargeInActive: false,
     bargeInCount: 0,
@@ -97,11 +69,12 @@ export function App() {
     autoHangUpCountdown: null
   });
 
-  const [prosody, setProsody] = useState<AcousticProsodyMetrics>(INITIAL_PROSODY);
-  const [transcripts, setTranscripts] = useState<TranscriptEntry[]>(INITIAL_TRANSCRIPTS);
-  const [ticket, setTicket] = useState<TriageTicket>(INITIAL_TRIAGE_TICKET);
+  const [prosody, setProsody] = useState<AcousticProsodyMetrics>(STANDBY_PROSODY);
+  const [transcripts, setTranscripts] = useState<TranscriptEntry[]>(STANDBY_TRANSCRIPTS);
+  const [ticket, setTicket] = useState<TriageTicket>(STANDBY_TRIAGE_TICKET);
   const [callerAudioData, setCallerAudioData] = useState<Uint8Array>(new Uint8Array(64));
   const [geminiAudioData, setGeminiAudioData] = useState<Uint8Array>(new Uint8Array(64));
+
   // Purge any historical key stored in localStorage
   useEffect(() => {
     try {
@@ -193,7 +166,6 @@ export function App() {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (autoHangUpCountdown === 0) {
-      // Countdown reached 0: execute full teardown
       handleStopCall();
       setAutoHangUpCountdown(null);
       setTelemetry((t) => ({ ...t, callState: 'FINALIZED' }));
@@ -242,19 +214,19 @@ export function App() {
       ticketId: `HYD-108-${Date.now().toString().slice(-4)}`,
       timestamp: new Date().toLocaleTimeString(),
       category: 'ROAD_ACCIDENT',
-      categoryLabel: 'Awaiting Voice Input...',
+      categoryLabel: 'Awaiting Caller Voice...',
       severity: 'MODERATE',
       landmark: 'Listening for landmark...',
       exactLocation: 'Hyderabad Dispatch Line Open',
       extractedVitals: {
         consciousness: 'Listening to caller audio...',
         breathing: 'Acoustic prosody monitor active',
-        pulseStatus: 'Awaiting report',
-        bloodLoss: 'Awaiting report',
+        pulseStatus: 'Evaluating',
+        bloodLoss: 'Evaluating',
         traumaNotes: 'Speak into microphone to populate live triage assessment'
       },
       callerIdentity: {
-        phone: 'Incoming Emergency Line',
+        phone: 'Live Emergency Line',
         vehiclePlate: 'Monitoring audio...'
       },
       recommendedUnit: {
@@ -299,23 +271,9 @@ export function App() {
 
   const handleStartNewCall = () => {
     handleStopCall();
-    setTranscripts([]);
-    setTicket({
-      ...INITIAL_TRIAGE_TICKET,
-      ticketId: `HYD-108-${Date.now().toString().slice(-4)}`,
-      dispatchStatus: 'PENDING_APPROVAL',
-      timestamp: new Date().toLocaleTimeString(),
-      lastUpdated: new Date().toLocaleTimeString()
-    });
-    setProsody({
-      stressScore: 10,
-      pitchVarianceHz: 0,
-      speechRateWpm: 0,
-      snrDb: 6,
-      detectedTags: [
-        { id: 'line-ready', label: '108 Line Ready For Next Emergency', severity: 'info', confidence: 0.99, active: true }
-      ]
-    });
+    setTranscripts(STANDBY_TRANSCRIPTS);
+    setTicket(STANDBY_TRIAGE_TICKET);
+    setProsody(STANDBY_PROSODY);
     setAutoHangUpCountdown(null);
     setTelemetry((t) => ({
       ...t,
@@ -364,7 +322,7 @@ export function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#06080d] text-slate-100 select-none">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 select-none">
       {/* Top Header */}
       <Header
         telemetry={telemetry}
@@ -376,8 +334,8 @@ export function App() {
         onStartScenario={handleStartScenario}
       />
 
-      {/* Main 4-Zone Command Grid */}
-      <main className="flex-1 p-3.5 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-3.5 max-w-[1920px] w-full mx-auto">
+      {/* Main 4-Zone Command Grid with Enhanced Breathing Room & Premium Padding */}
+      <main className="flex-1 p-4 md:p-6 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 max-w-[1920px] w-full mx-auto">
         {/* Zone 1 (Left): Vocal Prosody & Acoustic Telemetry */}
         <section className="lg:col-span-3 h-full overflow-hidden">
           <ProsodyZone
