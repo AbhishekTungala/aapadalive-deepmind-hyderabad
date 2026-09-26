@@ -58,7 +58,7 @@ export function App() {
   const [telemetry, setTelemetry] = useState<SystemTelemetry>({
     connectionStatus: 'DISCONNECTED',
     interactionStatus: 'IDLE',
-    latencyMs: 24,
+    latencyMs: 18,
     activeModel: 'gemini-3.8-live',
     bargeInActive: false,
     bargeInCount: 0,
@@ -322,7 +322,7 @@ export function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 select-none">
+    <div className="min-h-screen h-screen w-screen overflow-hidden bg-[#07090e] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-950/20 via-[#07090e] to-[#030508] text-slate-100 flex flex-col select-none relative font-sans antialiased">
       {/* Top Header */}
       <Header
         telemetry={telemetry}
@@ -334,9 +334,9 @@ export function App() {
         onStartScenario={handleStartScenario}
       />
 
-      {/* Main 4-Zone Command Grid with Enhanced Breathing Room & Premium Padding */}
-      <main className="flex-1 p-4 md:p-6 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 max-w-[1920px] w-full mx-auto">
-        {/* Zone 1 (Left): Vocal Prosody & Acoustic Telemetry */}
+      {/* Main Tactical Grid Cards */}
+      <main className="flex-1 p-3.5 md:p-4 lg:p-5 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-3.5 md:gap-4 lg:gap-5 max-w-[1920px] w-full mx-auto">
+        {/* Zone 1 (Left): Vocal Prosody & Acoustic Telemetry HUD */}
         <section className="lg:col-span-3 h-full overflow-hidden">
           <ProsodyZone
             prosody={prosody}
